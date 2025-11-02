@@ -9,16 +9,6 @@
   </entry>
   <entry>
     <title></title>
-    <url>/about/index.html</url>
-    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
-
-兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
-
-联系我QQ 1935572185163邮箱 lzr20061008@163.com
-]]></content>
-  </entry>
-  <entry>
-    <title></title>
     <url>/css/custom.css</url>
     <content><![CDATA[/* @font-face {
   font-family: Candyhome;
@@ -390,5 +380,15 @@ div#category {
 #article-container figure.highlight {
   border-radius: 10px;
 }]]></content>
+  </entry>
+  <entry>
+    <title></title>
+    <url>/about/index.html</url>
+    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
+
+兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
+
+联系我QQ 1935572185163邮箱 lzr20061008@163.com
+]]></content>
   </entry>
 </search>
