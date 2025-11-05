@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>梦开始的地方</title>
-    <url>/posts/1234.html</url>
-    <content><![CDATA[我的博客搭建终于好了！
-从今天起，我会在我的博客上分享我的wp，以及一些CTF的日常，希望和大家一起多多交流！
-]]></content>
-  </entry>
-  <entry>
     <title>ret2text小tips</title>
     <url>/posts/d4f00467.html</url>
     <content><![CDATA[exp模板
@@ -15,6 +8,13 @@ from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A
 
 264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
 注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
+]]></content>
+  </entry>
+  <entry>
+    <title>梦开始的地方</title>
+    <url>/posts/1234.html</url>
+    <content><![CDATA[我的博客搭建终于好了！
+从今天起，我会在我的博客上分享我的wp，以及一些CTF的日常，希望和大家一起多多交流！
 ]]></content>
   </entry>
   <entry>
@@ -451,7 +451,7 @@ div#category {
 /* 侧边栏个人信息卡片动态渐变色 */
 #aside-content>.card-widget.card-info{
     background: linear-gradient(-45deg, rgba(255, 183, 197, 0.8), 
-    rgba(44, 227, 251, 0.8), 
+    rgba(223, 42, 130, 0.8), 
     rgba(255, 184, 226, 0.8), 
     rgba(255, 219, 111, 0.8));
 }
