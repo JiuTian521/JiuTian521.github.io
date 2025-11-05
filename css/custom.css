@@ -419,8 +419,8 @@ div#category {
 /* 侧边栏个人信息卡片动态渐变色 */
 #aside-content>.card-widget.card-info{
     background: linear-gradient(-45deg, rgba(255, 183, 197, 0.8), 
-    rgba(223, 42, 130, 0.8), 
-    rgba(255, 184, 226, 0.8), 
+    rgb(234 138 138 / 80%), 
+    rgb(255 184 184 / 80%), 
     rgba(255, 219, 111, 0.8));
 }
 [data-theme=dark] #aside-content>.card-widget.card-info {
