@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-05T14:04:06.308Z</updated>
+  <updated>2025-11-06T01:38:37.362Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -21,7 +21,7 @@
     <link href="https://jiutian521.github.io/posts/d4f00467.html"/>
     <id>https://jiutian521.github.io/posts/d4f00467.html</id>
     <published>2025-11-05T04:00:00.000Z</published>
-    <updated>2025-11-05T14:04:06.308Z</updated>
+    <updated>2025-11-06T01:38:37.362Z</updated>
     
     <content type="html"><![CDATA[<p>今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存</p><p>看一下左下角的时间，如果是now那就证明保存了</p><p>另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了</p><p>最后，感谢我磊哥再一次救我</p>]]></content>
     
@@ -35,6 +35,8 @@
     
     
     
+    <category term="碎碎念" scheme="https://jiutian521.github.io/categories/%E7%A2%8E%E7%A2%8E%E5%BF%B5/"/>
+    
     
   </entry>
   
@@ -43,7 +45,7 @@
     <link href="https://jiutian521.github.io/posts/1234.html"/>
     <id>https://jiutian521.github.io/posts/1234.html</id>
     <published>2025-11-02T10:00:00.000Z</published>
-    <updated>2025-11-02T09:57:23.131Z</updated>
+    <updated>2025-11-06T01:38:44.638Z</updated>
     
     <content type="html"><![CDATA[<p>我的博客搭建终于好了！</p><p>从今天起，我会在我的博客上分享我的<strong>wp</strong>，以及一些<strong>CTF的日常</strong>，希望和大家一起多多交流！</p>]]></content>
     
@@ -56,6 +58,8 @@
       
     
     
+    
+    <category term="碎碎念" scheme="https://jiutian521.github.io/categories/%E7%A2%8E%E7%A2%8E%E5%BF%B5/"/>
     
     
   </entry>

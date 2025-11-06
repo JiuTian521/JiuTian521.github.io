@@ -2,6 +2,33 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://jiutian521.github.io/archive/index.html</loc>
+    
+    <lastmod>2025-11-06</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://jiutian521.github.io/posts/1234.html</loc>
+    
+    <lastmod>2025-11-06</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://jiutian521.github.io/posts/d4f00467.html</loc>
+    
+    <lastmod>2025-11-06</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://jiutian521.github.io/posts/2ee84d32.html</loc>
     
     <lastmod>2025-11-06</lastmod>
@@ -56,25 +83,7 @@
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/posts/d4f00467.html</loc>
-    
-    <lastmod>2025-11-05</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://jiutian521.github.io/about/index.html</loc>
-    
-    <lastmod>2025-11-02</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://jiutian521.github.io/posts/1234.html</loc>
     
     <lastmod>2025-11-02</lastmod>
     
@@ -109,6 +118,13 @@
   
   <url>
     <loc>https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/</loc>
+    <lastmod>2025-11-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://jiutian521.github.io/categories/%E7%A2%8E%E7%A2%8E%E5%BF%B5/</loc>
     <lastmod>2025-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
