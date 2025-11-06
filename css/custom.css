@@ -430,3 +430,89 @@ div#category {
     rgba(90, 90, 90, 0.8));
 }
 
+
+/*导航栏居中*/
+	#nav-right{
+    flex:1 1 auto;
+    justify-content: flex-end;
+    margin-left: auto;
+    display: flex;
+    flex-wrap:nowrap;
+}
+
+
+
+
+
+/*导航栏*/
+.nav-fixed>#nav {
+  background: linear-gradient(-45deg, #e0c1fa55, #fdbde755, #cfb5fc55, #fcbffa55) !important;
+  backdrop-filter: blur(10px);
+}
+[data-theme="dark"] .nav-fixed>#nav{
+  background: rgba(45, 10, 61, 0.7) !important;
+  backdrop-filter: blur(10px);
+}
+/*文章页面*/
+.layout>#post {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+
+[data-theme=dark] .layout>#post {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+
+/*主页文章轮播页面*/
+#recent-posts>.recent-post-item {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] #recent-posts>.recent-post-item {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+
+/*主页文章列表页面卡片*/
+#recent-posts>.recent-post-items .recent-post-item{
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] #recent-posts>.recent-post-items .recent-post-item{
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+/*分类页面*/
+.layout>#page {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) ;
+}
+[data-theme=dark] .layout>#page {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+
+/*归档页面*/
+.layout>#archive {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] .layout>#archive {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+
+/*分类点进去的页面*/
+.layout>#category {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] .layout>#category {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+
+/*标签点进去的页面*/
+.layout>#tag {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] .layout>#tag {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+
+.layout.hide-aside {
+ max-width: 1600px;
+}
+/* 设置黑夜的时候，社交按钮为白色 */
+[data-theme=dark] .social-icon i {
+  color: rgba(188, 188, 188) !important; /* 设置为白色 */
+}
