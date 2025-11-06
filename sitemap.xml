@@ -38,9 +38,18 @@
   </url>
   
   <url>
+    <loc>https://jiutian521.github.io/tags/index.html</loc>
+    
+    <lastmod>2025-11-06</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://jiutian521.github.io/categories/index.html</loc>
     
-    <lastmod>2025-11-05</lastmod>
+    <lastmod>2025-11-06</lastmod>
     
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -81,6 +90,20 @@
     <priority>1.0</priority>
   </url>
 
+  
+  <url>
+    <loc>https://jiutian521.github.io/tags/ret2libc/</loc>
+    <lastmod>2025-11-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://jiutian521.github.io/tags/ret2text/</loc>
+    <lastmod>2025-11-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
   
 
   
