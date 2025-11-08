@@ -11,15 +11,6 @@
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/posts/0.html</loc>
-    
-    <lastmod>2025-11-06</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://jiutian521.github.io/%E6%9C%AA%E5%91%BD%E5%90%8D.html</loc>
     
     <lastmod>2025-11-06</lastmod>
@@ -128,14 +119,14 @@
 
   
   <url>
-    <loc>https://jiutian521.github.io/tags/ret2text/</loc>
+    <loc>https://jiutian521.github.io/tags/ret2libc/</loc>
     <lastmod>2025-11-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/tags/ret2libc/</loc>
+    <loc>https://jiutian521.github.io/tags/ret2text/</loc>
     <lastmod>2025-11-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -151,14 +142,14 @@
 
   
   <url>
-    <loc>https://jiutian521.github.io/categories/%E7%A2%8E%E7%A2%8E%E5%BF%B5/</loc>
+    <loc>https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/</loc>
     <lastmod>2025-11-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/</loc>
+    <loc>https://jiutian521.github.io/categories/%E7%A2%8E%E7%A2%8E%E5%BF%B5/</loc>
     <lastmod>2025-11-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
