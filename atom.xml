@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-08T09:19:27.865Z</updated>
+  <updated>2025-11-08T16:38:18.663Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -17,11 +17,24 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
+    <title></title>
+    <link href="https://jiutian521.github.io/posts/0.html"/>
+    <id>https://jiutian521.github.io/posts/0.html</id>
+    <published>2025-11-08T07:48:08.366Z</published>
+    <updated>2025-11-08T16:38:18.663Z</updated>
+    
+    
+    
+    
+    
+  </entry>
+  
+  <entry>
     <title>初识格式化字符串（上）</title>
     <link href="https://jiutian521.github.io/posts/c6380b0f.html"/>
     <id>https://jiutian521.github.io/posts/c6380b0f.html</id>
     <published>2025-11-07T16:00:00.000Z</published>
-    <updated>2025-11-08T09:19:27.865Z</updated>
+    <updated>2025-11-08T11:52:47.247Z</updated>
     
     <content type="html"><![CDATA[<h2 id="1-深入理解格式化字符串"><a href="#1-深入理解格式化字符串" class="headerlink" title="1.深入理解格式化字符串"></a>1.深入理解格式化字符串</h2><p>要想理解格式化字符串的原理，我们必须要知道的一个问题是，printf调用时，它的第一个参数是什么，比如<code>printf(&quot;%d %f\n&quot;, x, y);</code>，它的一参是x吗？</p><p>让我们来看看printf的声明，<code>int printf(const char *format, ...)</code>，没错，printf的一参是”%d %f\n”，即格式化字符串，这一点是很多同学都没有意识到的</p><p>我们必须要深刻理解的第二个问题是，什么是格式化字符串</p><blockquote><p>格式化字符串是一些程序设计语言的输入&#x2F;输出库中能将字符串参数转换为另一种形式输出的<strong>函数</strong>，它通过用于把随后对应的0个或多个函数参数转换为相应的格式输出；格式化字符串中转换说明以外的其它字符原样输出。我补充一点，这里的转换说明即格式化占位符。</p></blockquote><p>（ps：不要因为长就不读了，反而要读得更仔细，通过学习pwn我认识到，越涉及到一个概念的本质，描述的文字就会越详细）</p><p>通俗的说，它就是包含格式化占位符的字符串</p><h2 id="2-格式化字符串的工作原理"><a href="#2-格式化字符串的工作原理" class="headerlink" title="2.格式化字符串的工作原理"></a>2.格式化字符串的工作原理</h2><p>我们平时使用printf时，格式化占位符是必须和后面的参数一一对应的，有多少个格式化占位符，就必须有多少个参数</p><p>这里必须再说一下printf是如何调用参数的。在64位系统中，我们的参数先会按照一定的顺序被放到6个寄存器里，从第7个参数往后，参数会被放在栈里；32位系统中，参数是直接被放到栈里保存的。</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %d&quot;,a,b,c);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>在这段程序中，我们的参数先会按顺序被放到栈空间里保存，然后，printf会从栈空间里去找对应的数据</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %d&quot;,a,b);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>而我们去掉了参数c会发生什么呢</p><p>结果会是：1 2 一个很奇怪的数</p><p>因为有第三个%d的存在，printf会试图去栈或寄存器（原本c所在的位置）再取一个整数，但是显然是无法找到c的，于是就会随机地从错误的位置读取内存，就把这个奇怪的数翻了出来。这也侧面证明了printf是从栈里去寻址的</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %p&quot;,a,b);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>我们把占位符改成%p，输出的结果就是c在栈上的地址</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">char a[]</span><br><span class="line">scanf(&quot;%s&quot;,&amp;)</span><br><span class="line">printf(a);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>更极端的情况如上</p><p>因此，我们可以利用格式化字符串实现可读可写</p><p>总结一下：格式化字符串漏洞的产生，就是参数和格式化占位符没有数量上的一一对应，即源代码里的格式化占位符少于参数的数量，于是我们就可以通过输入不同的格式化占位符，去打印栈空间里对应的内容</p><p>eg1：newstar2025 week2 刻在栈上的秘密<br>题目内容：</p><blockquote><p>欢迎来到 x64 位餐厅！服务员 printf 先生有点健忘，他只能记住您菜单上的前 6 道菜 (RDI, RSI, RDX…)，再多就只能堆在摇摇晃晃的餐盘 (栈) 上了。更糟糕的是，他会把你写的菜单原封不动地大声念出来。你能设计一份别有用心的菜单，让他念着念着，就把秘密房间的密码念给你听吗？</p></blockquote><p>这个题没有给我们可执行文件，直接nc链接做即可</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_16-05-19.6ikpjc8t42.webp" alt="题目"></p><p>我们先输入aaaa加几个%p试一下，发现没有看到41414141，这说明aaaa被当成了格式化字符串的一部分被传入了。由于题目简单，我合理推测该prntf函数只有一个参数，即偏移量为0。不过这不重要，正常题目不会这样的</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_16-35-18.54y6fb4kh0.webp"></p><p>下面开始正式做题</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_16-41-25.6ikpjcngqj.webp"></p><p>我们可以看到，第11个%p打印出了密码所在寄存器的地址</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_17-03-18.5c1earqu49.webp"></p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_17-03-24.7eh6ytpf5k.webp"></p>]]></content>
     
@@ -29,31 +42,6 @@
       
       
     <summary type="html">&lt;h2 id=&quot;1-深入理解格式化字符串&quot;&gt;&lt;a href=&quot;#1-深入理解格式化字符串&quot; class=&quot;headerlink&quot; title=&quot;1.深入理解格式化字符串&quot;&gt;&lt;/a&gt;1.深入理解格式化字符串&lt;/h2&gt;&lt;p&gt;要想理解格式化字符串的原理，我们必须要知道的一个问题是，pr</summary>
-      
-    
-    
-    
-    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
-    
-    
-    <category term="格式化字符串" scheme="https://jiutian521.github.io/tags/%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>初识格式化字符串（下）</title>
-    <link href="https://jiutian521.github.io/posts/7e846c6a.html"/>
-    <id>https://jiutian521.github.io/posts/7e846c6a.html</id>
-    <published>2025-11-07T16:00:00.000Z</published>
-    <updated>2025-11-08T09:16:54.633Z</updated>
-    
-    <content type="html"><![CDATA[<p>在上一篇文章中，我们了解了是如何利用格式化字符串漏洞实现任意读的</p>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;p&gt;在上一篇文章中，我们了解了是如何利用格式化字符串漏洞实现任意读的&lt;/p&gt;
-</summary>
       
     
     
