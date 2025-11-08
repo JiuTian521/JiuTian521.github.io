@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-08T16:38:18.663Z</updated>
+  <updated>2025-11-08T11:52:47.247Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -15,19 +15,6 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
-  
-  <entry>
-    <title></title>
-    <link href="https://jiutian521.github.io/posts/0.html"/>
-    <id>https://jiutian521.github.io/posts/0.html</id>
-    <published>2025-11-08T07:48:08.366Z</published>
-    <updated>2025-11-08T16:38:18.663Z</updated>
-    
-    
-    
-    
-    
-  </entry>
   
   <entry>
     <title>初识格式化字符串（上）</title>
@@ -42,6 +29,31 @@
       
       
     <summary type="html">&lt;h2 id=&quot;1-深入理解格式化字符串&quot;&gt;&lt;a href=&quot;#1-深入理解格式化字符串&quot; class=&quot;headerlink&quot; title=&quot;1.深入理解格式化字符串&quot;&gt;&lt;/a&gt;1.深入理解格式化字符串&lt;/h2&gt;&lt;p&gt;要想理解格式化字符串的原理，我们必须要知道的一个问题是，pr</summary>
+      
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+    <category term="格式化字符串" scheme="https://jiutian521.github.io/tags/%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>初识格式化字符串（下）</title>
+    <link href="https://jiutian521.github.io/posts/7e846c6a.html"/>
+    <id>https://jiutian521.github.io/posts/7e846c6a.html</id>
+    <published>2025-11-07T16:00:00.000Z</published>
+    <updated>2025-11-08T16:45:45.669Z</updated>
+    
+    <content type="html"><![CDATA[<p>在上一篇文章中，我们了解了如何利用格式化字符串漏洞实现任意读,主要靠%d，%s等格式化占位符泄露内存。接下来介绍一下如何实现任意写，即覆盖内存</p><h2 id="开挂的-n"><a href="#开挂的-n" class="headerlink" title="开挂的%n"></a>开挂的%n</h2><p>%n是一个很牛的格式化占位符，和%d，%s等占位符不一样,它不输出字符，而是把已经成功输出的字符个数写入对应的整型指针参数所指的变量</p><p>换句话说，它会将已打印的字符个数输出至格式化参数对应的地址中</p><blockquote><p>printf(“包含%n的格式字符串”, …, &amp;变量名);</p></blockquote><p>比较特殊的是，%n对应的参数必须是一个指向整数的指针</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line"></span><br><span class="line">int main() &#123;</span><br><span class="line">    int count;</span><br><span class="line"></span><br><span class="line">    printf(&quot;Hello, world!%n\n&quot;, &amp;count);</span><br><span class="line">    printf(&quot;上面那行输出了 %d 个字符。\n&quot;, count);</span><br><span class="line"></span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>输出结果是：<br>Hello, world!<br>上面那行输出了 13 个字符。</p><p>也就是说%n统计了前面字符串的字符数，并且让count&#x3D;1</p><h2 id="利用-n覆盖内存实战"><a href="#利用-n覆盖内存实战" class="headerlink" title="利用%n覆盖内存实战"></a>利用%n覆盖内存实战</h2><p>主要分以下三个步骤：<br>1.确定覆盖地址<br>2.确定相对偏移<br>3.进行覆盖  </p><p>eg2.ctfshow pwn入门91</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_19-19-22.102l3ea63n.webp"></p><p>logo函数打印了一些欢迎词，不用管。然后是ctfshow函数，下面判断了daniu的值是否等于6，如果是，那么我们就能执行system&#x2F;bin&#x2F;sh。  </p><p>我们进ctfshow函数看一下</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_19-19-44.6m4bh9bgwy.webp"></p><p>首先定义了一个大小为80的数组（缓冲区）s，memset清空重置了s的内容，有一个read函数可以往s里读入数据。重点是下面的printf函数，明显是存在格式化字符串漏洞的，再下面的printf函数可以打印出目前daniu的值</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_19-20-17.2h8q55eau9.webp"></p><p>我们看一下daniu，这里的？就说明其初始值为0，而位于.bss段则是可读可写的</p><p>下面我们的目的就是将daniu的值覆盖为6，覆盖地址确定了，下面我们来求偏移量。什么是偏移量，就是我们利用格式化字符串漏洞写入数据时，我们并不知道是从printf的第几个参数开始写的，我们这里要找到我们是从第几个参数</p><p>有以下两种方法</p><h3 id="手测"><a href="#手测" class="headerlink" title="手测"></a>手测</h3><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-08_20-09-33.6pnxezpvav.webp"></p><p>aaaa在16进制里是0x61616161，从aaaa往后数的第7个地址是0x61616161，证明我们可以在第7个参数往后读</p><p>这种方法比较无脑，但是存在一个问题是如果限制我们输入%p的数量，那就不好找偏移量了。于是就有了我们的第二个方法</p><h3 id="指令"><a href="#指令" class="headerlink" title="指令"></a>指令</h3><p>在pwndbg里有一个叫fmtarg的插件，可以自动帮我们计算偏移量，但是我的虚拟机里没有装这个插件，所以就不演示了，而且我个人更喜欢手测，所以如果以后遇到这种特殊情况再说</p><p>有了覆盖地址和偏移量，我们就可以进行覆盖了</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line"></span><br><span class="line">io = remote (&#x27;pwn.challenge.ctf.show&#x27;,28271)</span><br><span class="line">#offset = 7</span><br><span class="line">daniu_addr = 0x0804B038</span><br><span class="line">payload = p32(daniu_addr) + b&#x27;aa%7$n&#x27;</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><p>我们来逐步理解一下这段payload<br>前面我们提到，%n对应的参数必须是一个指向整数的<strong>指针</strong>,也就是必须是一个<strong>地址</strong></p><p>我们前面已经测试过了，如果我们要通过read去写入字符串，是从栈上的第七个参数开始的写，因此，我们是通过read函数，daniu_addr写到了栈上的第七个参数上</p><p>然后到了第一个printf函数上，printf的第一个参数是s的第一个参数，也就是我们通过read传入的格式化字符串”\x38\xb0\x04\x08 a a %7$n”，我们需要利用的是printf函数里的%7$n这个特性，</p><p>我们可以将%7$n理解为连续7个%n，但是最终起作用的是第7个%n，很显然%7$n需要找printf的第七个参数的地址，这个时候就必须去栈里寻找，前六个参数都是我们之前说的”奇怪的数”，也就是随机从栈上或者寄存器里取的，但是到了栈空间上第七个参数的位置就不一样了，我们通过read函数将daniu_addr写进了栈空间上的第七个参数，那么%7$n就非常开心了，他就会将目标地址锁定为daniu_addr</p><p>让我们把视角拉回printf函数，%7$n前有几个字符呢，我们将daniu_addr打包成了4个字符，加上我们手动输入的两个字符的aa，这一共是6个字符，于是printf函数开始的%7$n开始发力了，它统计到它之前有6个字符，并将数值6赋给了它指向地址对应的参数，也就是让daniu&#x3D;6</p><p>特别容易混淆的是printf的参数和寄存器上的参数，他俩并不是一回事，一定要区分好。printf的一参永远是格式化字符串，read读进去的位置是寄存器的第x个参数的地址，是%x$n所取的地址，这里的x就是我们算的偏移量。</p><p>最后得到flag，靶场迟迟连不上，就先不截图了</p><p>总结一下，格式化字符串漏洞存在的标志比较明显，目前我们初步认识了如何利用%d，%s等读，利用%n写。下一步，格式化字符串还会发挥出什么奇效呢，让我们拭目以待</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;在上一篇文章中，我们了解了如何利用格式化字符串漏洞实现任意读,主要靠%d，%s等格式化占位符泄露内存。接下来介绍一下如何实现任意写，即覆盖内存&lt;/p&gt;
+&lt;h2 id=&quot;开挂的-n&quot;&gt;&lt;a href=&quot;#开挂的-n&quot; class=&quot;headerlink&quot; title=&quot;开挂的</summary>
       
     
     
