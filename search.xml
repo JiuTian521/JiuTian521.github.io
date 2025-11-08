@@ -4,6 +4,44 @@
   
     
     <entry>
+      <title>初识格式化字符串（上）</title>
+      <link href="/posts/c6380b0f.html"/>
+      <url>/posts/c6380b0f.html</url>
+      
+        <content type="html"><![CDATA[<h2 id="1-深入理解格式化字符串"><a href="#1-深入理解格式化字符串" class="headerlink" title="1.深入理解格式化字符串"></a>1.深入理解格式化字符串</h2><p>要想理解格式化字符串的原理，我们必须要知道的一个问题是，printf调用时，它的第一个参数是什么，比如<code>printf(&quot;%d %f\n&quot;, x, y);</code>，它的一参是x吗？</p><p>让我们来看看printf的声明，<code>int printf(const char *format, ...)</code>，没错，printf的一参是”%d %f\n”，即格式化字符串，这一点是很多同学都没有意识到的</p><p>我们必须要深刻理解的第二个问题是，什么是格式化字符串</p><blockquote><p>格式化字符串是一些程序设计语言的输入&#x2F;输出库中能将字符串参数转换为另一种形式输出的<strong>函数</strong>，它通过用于把随后对应的0个或多个函数参数转换为相应的格式输出；格式化字符串中转换说明以外的其它字符原样输出。我补充一点，这里的转换说明即格式化占位符。</p></blockquote><p>（ps：不要因为长就不读了，反而要读得更仔细，通过学习pwn我认识到，越涉及到一个概念的本质，描述的文字就会越详细）</p><p>通俗的说，它就是包含格式化占位符的字符串</p><h2 id="2-格式化字符串的工作原理"><a href="#2-格式化字符串的工作原理" class="headerlink" title="2.格式化字符串的工作原理"></a>2.格式化字符串的工作原理</h2><p>我们平时使用printf时，格式化占位符是必须和后面的参数一一对应的，有多少个格式化占位符，就必须有多少个参数</p><p>这里必须再说一下printf是如何调用参数的。在64位系统中，我们的参数先会按照一定的顺序被放到6个寄存器里，从第7个参数往后，参数会被放在栈里；32位系统中，参数是直接被放到栈里保存的。</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %d&quot;,a,b,c);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>在这段程序中，我们的参数先会按顺序被放到栈空间里保存，然后，printf会从栈空间里去找对应的数据</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %d&quot;,a,b);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>而我们去掉了参数c会发生什么呢</p><p>结果会是：1 2 一个很奇怪的数</p><p>因为有第三个%d的存在，printf会试图去栈或寄存器（原本c所在的位置）再取一个整数，但是显然是无法找到c的，于是就会随机地从错误的位置读取内存，就把这个奇怪的数翻了出来。这也侧面证明了printf是从栈里去寻址的</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">int a=1;</span><br><span class="line">int b=2;</span><br><span class="line">int c=3;</span><br><span class="line">printf(&quot;%d %d %p&quot;,a,b);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>我们把占位符改成%p，输出的结果就是c在栈上的地址</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">char a[]</span><br><span class="line">scanf(&quot;%s&quot;,&amp;)</span><br><span class="line">printf(a);</span><br><span class="line">return 0;</span><br></pre></td></tr></table></figure><p>更极端的情况如上</p><p>因此，我们可以利用格式化字符串实现可读可写</p><p>总结一下：格式化字符串漏洞的产生，就是参数和格式化占位符没有数量上的一一对应，即源代码里的格式化占位符少于参数的数量，于是我们就可以通过输入不同的格式化占位符，去打印栈空间里对应的内容</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> pwn入门 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 格式化字符串 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title></title>
+      <link href="/posts/0.html"/>
+      <url>/posts/0.html</url>
+      
+        <content type="html"><![CDATA[]]></content>
+      
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
       <link href="/posts/d4f00467.html"/>
       <url>/posts/d4f00467.html</url>
@@ -146,10 +184,10 @@
     
     <entry>
       <title></title>
-      <link href="/about/index.html"/>
-      <url>/about/index.html</url>
+      <link href="/%E6%9C%AA%E5%91%BD%E5%90%8D.html"/>
+      <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
       
-        <content type="html"><![CDATA[<h1 id="关于我"><a href="#关于我" class="headerlink" title="关于我"></a>关于我</h1><h2 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h2><p>SDUST <strong>大一学生</strong><br>CTFer 主要方向为<strong>pwn</strong></p><hr><h2 id="兴趣爱好"><a href="#兴趣爱好" class="headerlink" title="兴趣爱好"></a>兴趣爱好</h2><p>足球 主队是<strong>山东泰山</strong>和<strong>曼城</strong><br>板绘 爱画一些<strong>二次元妹子</strong>，<del>但实际上是个现充</del><br>在看的书 <strong>《深入理解计算机系统（CSAPP）》</strong></p><hr><h2 id="联系我"><a href="#联系我" class="headerlink" title="联系我"></a>联系我</h2><p>QQ 1935572185<br>163邮箱 <a href="mailto:&#x6c;&#122;&#x72;&#50;&#x30;&#48;&#54;&#49;&#x30;&#48;&#56;&#x40;&#49;&#x36;&#x33;&#x2e;&#99;&#x6f;&#x6d;">lzr20061008@163.com</a></p>]]></content>
+        <content type="html"><![CDATA[]]></content>
       
     </entry>
     
@@ -194,6 +232,17 @@
       <url>/tags/index.html</url>
       
         <content type="html"><![CDATA[]]></content>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title></title>
+      <link href="/about/index.html"/>
+      <url>/about/index.html</url>
+      
+        <content type="html"><![CDATA[<h1 id="关于我"><a href="#关于我" class="headerlink" title="关于我"></a>关于我</h1><h2 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h2><p>SDUST <strong>大一学生</strong><br>CTFer 主要方向为<strong>pwn</strong></p><hr><h2 id="兴趣爱好"><a href="#兴趣爱好" class="headerlink" title="兴趣爱好"></a>兴趣爱好</h2><p>足球 主队是<strong>山东泰山</strong>和<strong>曼城</strong><br>板绘 爱画一些<strong>二次元妹子</strong>，<del>但实际上是个现充</del><br>在看的书 <strong>《深入理解计算机系统（CSAPP）》</strong></p><hr><h2 id="联系我"><a href="#联系我" class="headerlink" title="联系我"></a>联系我</h2><p>QQ 1935572185<br>163邮箱 <a href="mailto:&#108;&#122;&#x72;&#x32;&#48;&#48;&#x36;&#49;&#48;&#x30;&#x38;&#64;&#49;&#x36;&#x33;&#46;&#99;&#111;&#109;">lzr20061008@163.com</a></p>]]></content>
       
     </entry>
     
