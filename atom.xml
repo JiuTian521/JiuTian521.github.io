@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-09T03:54:20.711Z</updated>
+  <updated>2025-11-12T03:06:05.208Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -15,6 +15,43 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>pwn前置基础大合集</title>
+    <link href="https://jiutian521.github.io/posts/e5ae4e99.html"/>
+    <id>https://jiutian521.github.io/posts/e5ae4e99.html</id>
+    <published>2025-11-11T16:00:00.000Z</published>
+    <updated>2025-11-12T03:06:05.208Z</updated>
+    
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>ret2text小tips</title>
+    <link href="https://jiutian521.github.io/posts/d4f00467.html"/>
+    <id>https://jiutian521.github.io/posts/d4f00467.html</id>
+    <published>2025-11-10T16:00:00.000Z</published>
+    <updated>2025-11-12T02:58:55.336Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="信息的表示和处理"><a href="#信息的表示和处理" class="headerlink" title="信息的表示和处理"></a>信息的表示和处理</h1><h2 id="二进制"><a href="#二进制" class="headerlink" title="二进制"></a>二进制</h2><p>起源悠久，可以追溯到埃及，印度巴拉巴拉，莱布尼茨进行了系统的发展，后由乔治·布尔进一步完善</p><p>相比十进制更容易表示，存储和传输，比如高电压表示1，低电压表示0</p><h2 id="编码"><a href="#编码" class="headerlink" title="编码"></a>编码</h2><p>无符号编码 大于等于零的数<br>补码 带正负号的整数<br>浮点数 </p><h1 id="信息存储和十六进制表示法"><a href="#信息存储和十六进制表示法" class="headerlink" title="信息存储和十六进制表示法"></a>信息存储和十六进制表示法</h1><p>程序将内存看成一个很大的字节数组，称为虚拟内存<br>内存的每一个字节由唯一的数字来标识，称为它的地址<br>所有地址的集合，称为虚拟内存空间</p><p>再C语言中，我们可以通过</p><p>1个字节（byte）或者说块，由8个位（bit）组成，一个位由0或1两种可能，最大是全部为1，即11111111；最小是0，即00000000。那么如果用十进制表示，最大值为255</p><p>字节作为计算机可寻址的最小单位，而并不是位</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;h1 id=&quot;信息的表示和处理&quot;&gt;&lt;a href=&quot;#信息的表示和处理&quot; class=&quot;headerlink&quot; title=&quot;信息的表示和处理&quot;&gt;&lt;/a&gt;信息的表示和处理&lt;/h1&gt;&lt;h2 id=&quot;二进制&quot;&gt;&lt;a href=&quot;#二进制&quot; class=&quot;headerlink&quot; ti</summary>
+      
+    
+    
+    
+    <category term="CSAPP" scheme="https://jiutian521.github.io/categories/CSAPP/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>初识ret2syscall</title>
