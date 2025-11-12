@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-12T03:06:10.648Z</updated>
+  <updated>2025-11-12T05:51:10.977Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -17,12 +17,20 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>pwn前置基础大合集</title>
+    <title>pwn前置基础大合集（更新中）</title>
     <link href="https://jiutian521.github.io/posts/e5ae4e99.html"/>
     <id>https://jiutian521.github.io/posts/e5ae4e99.html</id>
     <published>2025-11-11T16:00:00.000Z</published>
-    <updated>2025-11-12T03:06:10.648Z</updated>
+    <updated>2025-11-12T05:51:10.977Z</updated>
     
+    <content type="html"><![CDATA[<p>这篇博客主要是记录一下pwn的底层知识，主要知识来来自CSAPP，维基百科，b站网课等</p><h1 id="操作系统"><a href="#操作系统" class="headerlink" title="操作系统"></a>操作系统</h1><h2 id="1-发展历史"><a href="#1-发展历史" class="headerlink" title="1.发展历史"></a>1.发展历史</h2><p>1969 UNIX系统 肯尼斯·蓝·汤普森&amp;丹尼斯·麦卡利斯泰尔·里奇<br>奠定了现代操作系统，<strong>“一切皆文件”</strong></p><p>1984 ios mac 苹果操作系统<br>1985 window1.0<br>1991 linux 开源免费</p><h2 id="2-LINUX下计算机的控制流程"><a href="#2-LINUX下计算机的控制流程" class="headerlink" title="2.LINUX下计算机的控制流程"></a>2.LINUX下计算机的控制流程</h2><p>用户——应用软件——操作系统——驱动程序——硬件，从左到右逐层调用，其中操作系统包括系统软件和系统内核，内核负责管理它负责直接管理系统的进程、内存、设备驱动程序、文件和网络系统</p><p>这里我还是觉得CSAPP讲的非常好，于是结合CSAPP讲一下</p><p>刚才讲了，计算机的控制是逐层调用的，所以可以把操作系统看作是是应用程序和硬件之间的一层软件，应用程序必须通过操作系统访问处理器，主存，I&#x2F;O设备等硬件</p><p>因此，操作系统的两大功能是确保上层的<strong>应用软件</strong>既能控制，又不滥用下层的<strong>硬件</strong></p><p>操作系统通过进程、虚拟内存和文件来实现两大功能</p><p>进程 </p><p>虚拟内存 见CSAPP第二章</p><p>文件 权限的体现：可读可写可执行 可读可写不可执行 可读不可写不可执行</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;这篇博客主要是记录一下pwn的底层知识，主要知识来来自CSAPP，维基百科，b站网课等&lt;/p&gt;
+&lt;h1 id=&quot;操作系统&quot;&gt;&lt;a href=&quot;#操作系统&quot; class=&quot;headerlink&quot; title=&quot;操作系统&quot;&gt;&lt;/a&gt;操作系统&lt;/h1&gt;&lt;h2 id=&quot;1-发展历史</summary>
+      
     
     
     
