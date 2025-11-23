@@ -221,14 +221,14 @@
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/tags/ret2shellcode/</loc>
+    <loc>https://jiutian521.github.io/tags/ret2text/</loc>
     <lastmod>2025-11-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/tags/ret2text/</loc>
+    <loc>https://jiutian521.github.io/tags/ret2syscall/</loc>
     <lastmod>2025-11-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -242,7 +242,7 @@
   </url>
   
   <url>
-    <loc>https://jiutian521.github.io/tags/ret2syscall/</loc>
+    <loc>https://jiutian521.github.io/tags/ret2shellcode/</loc>
     <lastmod>2025-11-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
