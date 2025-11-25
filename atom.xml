@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-25T16:17:07.023Z</updated>
+  <updated>2025-11-25T16:44:05.616Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -21,20 +21,15 @@
     <link href="https://jiutian521.github.io/posts/ef296182.html"/>
     <id>https://jiutian521.github.io/posts/ef296182.html</id>
     <published>2025-11-24T16:00:00.000Z</published>
-    <updated>2025-11-25T16:17:07.023Z</updated>
+    <updated>2025-11-25T16:44:05.616Z</updated>
     
-    <content type="html"><![CDATA[<p>#read函数</p><blockquote><p>ssize_t read(int fd, void *buf, size_t count);</p></blockquote><p>fd：文件描述符</p><p>0 表示标准输入（stdin）</p><p>1 表示标准输出（stdout）</p><p>2 表示标准错误（stderr）</p><p>buf：存放读取数据的缓冲区指针（指向内存）</p><p>count：希望读取的字节数</p><blockquote><p>read(0, &amp;s[i], 1uLL);</p></blockquote><p>从标准输入读取 1 个字节，存入 s[i]</p>]]></content>
+    <content type="html"><![CDATA[<h1 id="read函数"><a href="#read函数" class="headerlink" title="read函数"></a>read函数</h1><blockquote><p>ssize_t read(int fd, void *buf, size_t count);</p></blockquote><p>fd：文件描述符</p><p>0 表示标准输入（stdin）</p><p>1 表示标准输出（stdout）</p><p>2 表示标准错误（stderr）</p><p>buf：存放读取数据的缓冲区指针（指向内存）</p><p>count：希望读取的字节数</p><blockquote><p>read(0, &amp;s[i], 1uLL);</p></blockquote><p>从标准输入读取 1 个字节，存入 s[i]</p>]]></content>
     
     
       
       
-    <summary type="html">&lt;p&gt;#read函数&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;ssize_t read(int fd, void *buf, size_t count);&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;fd：文件描述符&lt;/p&gt;
-&lt;p&gt;0 表示标准输入（stdin）&lt;/p&gt;
-&lt;p&gt;1 </summary>
+    <summary type="html">&lt;h1 id=&quot;read函数&quot;&gt;&lt;a href=&quot;#read函数&quot; class=&quot;headerlink&quot; title=&quot;read函数&quot;&gt;&lt;/a&gt;read函数&lt;/h1&gt;&lt;blockquote&gt;
+&lt;p&gt;ssize_t read(int fd, void *buf, size_t co</summary>
       
     
     
