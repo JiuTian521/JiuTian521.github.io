@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://jiutian521.github.io/posts/e4901ff4.html</loc>
+    
+    <lastmod>2025-11-27</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://jiutian521.github.io/posts/ef296182.html</loc>
     
     <lastmod>2025-11-25</lastmod>
@@ -220,7 +229,7 @@
 
   <url>
     <loc>https://jiutian521.github.io/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -228,56 +237,56 @@
   
   <url>
     <loc>https://jiutian521.github.io/tags/canary/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/tags/%E6%95%B4%E6%95%B0%E6%BA%A2%E5%87%BA/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/tags/ret2libc/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/tags/ret2shellcode/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/tags/ret2text/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/tags/%E6%95%B0%E7%BB%84%E8%B6%8A%E7%95%8C/</loc>
-    <lastmod>2025-11-25</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://jiutian521.github.io/tags/%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/tags/ret2syscall/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://jiutian521.github.io/tags/%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2/</loc>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
@@ -286,21 +295,21 @@
   
   <url>
     <loc>https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/categories/CSAPP/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://jiutian521.github.io/categories/%E7%A2%8E%E7%A2%8E%E5%BF%B5/</loc>
-    <lastmod>2025-11-25</lastmod>
+    <lastmod>2025-11-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
