@@ -121,6 +121,29 @@
   </entry>
   
   <entry>
+    <title>IDA常见函数总结</title>
+    <link href="https://jiutian521.github.io/posts/ef296182.html"/>
+    <id>https://jiutian521.github.io/posts/ef296182.html</id>
+    <published>2025-11-24T16:00:00.000Z</published>
+    <updated>2025-11-25T16:44:05.616Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="read函数"><a href="#read函数" class="headerlink" title="read函数"></a>read函数</h1><blockquote><p>ssize_t read(int fd, void *buf, size_t count);</p></blockquote><p>fd：文件描述符</p><p>0 表示标准输入（stdin）</p><p>1 表示标准输出（stdout）</p><p>2 表示标准错误（stderr）</p><p>buf：存放读取数据的缓冲区指针（指向内存）</p><p>count：希望读取的字节数</p><blockquote><p>read(0, &amp;s[i], 1uLL);</p></blockquote><p>从标准输入读取 1 个字节，存入 s[i]</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;h1 id=&quot;read函数&quot;&gt;&lt;a href=&quot;#read函数&quot; class=&quot;headerlink&quot; title=&quot;read函数&quot;&gt;&lt;/a&gt;read函数&lt;/h1&gt;&lt;blockquote&gt;
+&lt;p&gt;ssize_t read(int fd, void *buf, size_t co</summary>
+      
+    
+    
+    
+    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
+    
+    
+  </entry>
+  
+  <entry>
     <title>初识gdb的使用与数组越界</title>
     <link href="https://jiutian521.github.io/posts/fe35eb25.html"/>
     <id>https://jiutian521.github.io/posts/fe35eb25.html</id>
@@ -147,29 +170,6 @@
     <category term="数组越界" scheme="https://jiutian521.github.io/tags/%E6%95%B0%E7%BB%84%E8%B6%8A%E7%95%8C/"/>
     
     <category term="gdb" scheme="https://jiutian521.github.io/tags/gdb/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>IDA常见函数总结</title>
-    <link href="https://jiutian521.github.io/posts/ef296182.html"/>
-    <id>https://jiutian521.github.io/posts/ef296182.html</id>
-    <published>2025-11-24T16:00:00.000Z</published>
-    <updated>2025-11-25T16:44:05.616Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="read函数"><a href="#read函数" class="headerlink" title="read函数"></a>read函数</h1><blockquote><p>ssize_t read(int fd, void *buf, size_t count);</p></blockquote><p>fd：文件描述符</p><p>0 表示标准输入（stdin）</p><p>1 表示标准输出（stdout）</p><p>2 表示标准错误（stderr）</p><p>buf：存放读取数据的缓冲区指针（指向内存）</p><p>count：希望读取的字节数</p><blockquote><p>read(0, &amp;s[i], 1uLL);</p></blockquote><p>从标准输入读取 1 个字节，存入 s[i]</p>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;h1 id=&quot;read函数&quot;&gt;&lt;a href=&quot;#read函数&quot; class=&quot;headerlink&quot; title=&quot;read函数&quot;&gt;&lt;/a&gt;read函数&lt;/h1&gt;&lt;blockquote&gt;
-&lt;p&gt;ssize_t read(int fd, void *buf, size_t co</summary>
-      
-    
-    
-    
-    <category term="pwn入门" scheme="https://jiutian521.github.io/categories/pwn%E5%85%A5%E9%97%A8/"/>
-    
     
   </entry>
   

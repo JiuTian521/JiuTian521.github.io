@@ -365,7 +365,7 @@ div#category {
 }
 
 
-/* 侧边栏个人信息卡片动态渐变色 */
+/* 侧边栏个人信息卡片动态渐变色 
 #aside-content > .card-widget.card-info {
   background: linear-gradient(
     -45deg,
@@ -415,6 +415,9 @@ div#category {
     background-position: 0% 50%;
   }
 }
+
+*/
+
 
 /* 侧边栏个人信息卡片动态渐变色 
 #aside-content>.card-widget.card-info{
