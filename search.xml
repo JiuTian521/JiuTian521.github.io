@@ -1107,6 +1107,57 @@ flagflag{well done}
       </tags>
   </entry>
   <entry>
+    <title>流量分析1</title>
+    <url>/posts/a12925ff.html</url>
+    <content><![CDATA[BUUCTF 被嗅探的流量某黑客潜入到某公司内网通过嗅探抓取了一段文件传输的数据，该数据也被该公司截获，你能帮该公司分析他抓取的到底是什么文件的数据吗？ 注意：得到的 flag 请包上 flag{} 提交
+根据提示，我们要找的是传输文件中的数据，文件传输一般使用 POST 请求，故先筛选出 POST 请求包
+http.request.method==POST”
+查看用了POST请求的http协议
+剩下两个包，在JPEG包里看到了flag明文
+
+可以用随波逐流一把梭
+BUUCTF easycap注意：得到的 flag 请包上 flag{} 提交
+这个题没有提示，打开流量包全是TCP，没有特征
+随便打开一条，直接分析analysis，追踪流，TCP streaming得到flag
+
+以下是AI分析的原理
+
+为什么不能直接看单个数据包？在网络传输中，数据（比如这个 Flag）通常不会作为一个整体直接发送。
+
+分段（Segmentation）：由于网络传输限制，较大的数据会被 TCP 协议拆分成许多个小的“数据段”（Segment）。
+乱序与重传：这些小段在互联网中传输时，可能会走不同的路径，导致到达顺序是乱的。
+控制信息干扰：每个数据包里都夹杂着大量的 MAC 地址、IP 地址、序列号（Seq）等“包装纸”。
+如果你只看 Wireshark 主界面的那一行行列表，你看到的是零件；而 Flag 是藏在成品里的。
+
+“追踪 TCP 流”到底做了什么？当你点击 Follow TCP Stream 时，Wireshark 会利用 TCP 协议中的**序列号（Sequence Number）和确认号（Acknowledgment Number）**完成以下工作：
+
+过滤：把所有不属于这次对话（即不属于这一对 IP 和端口）的干扰包全部踢掉。
+排序：按照序列号，把乱序到达的包重新排好队。
+剥壳：去掉所有的 IP 头、TCP 头等协议辅助信息。
+拼接：把纯粹的“数据负载（Payload）”按顺序粘在一起。
+
+为什么这样就能拿到 Flag？在 CTF 这种特定的场景下，出题人通常会模拟某种明文协议（如 HTTP、FTP、Telnet，或者是简单的 Socket 通信）来发送 Flag：
+
+明文传输：发送方（客户端或服务器）直接把 FLAG:{…} 字符串放进 TCP 的数据区。
+缺乏加密：因为没有使用 SSL&#x2F;TLS 加密，数据是以肉眼可见的 ASCII 码形式存在的。
+完整呈现：当你点击追踪流时，Wireshark 把这次通信的所有对话内容提取出来，Flag 就以原本的文本格式跳了出来。
+打个比方：流量包就像一堆碎纸片（数据包）。每一张纸片上可能只有一两个字母，且混杂着快递单号（协议头）。“追踪流”就是 Wireshark 帮你把属于同一个人的碎纸片找出来，拼成一张完整的信纸，你自然就能读出信上的内容了。
+BUUCTF 数据包中的线索公安机关近期截获到某网络犯罪团伙在线交流的数据包，但无法分析出具体的交流内容，聪明的你能帮公安机关找到线索吗？ 注意：得到的 flag 请包上 flag{} 提交
+大部分是TCP，小部分是http
+在过滤器直接输入http，查看http协议
+
+发现其中有个fenxi很可疑
+直接追踪流，得到了一大堆base64，直接解码解不出来，发现其实是个图片，得到flag
+
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>流量分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title></title>
     <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
     <content><![CDATA[]]></content>
