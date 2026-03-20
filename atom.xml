@@ -6,7 +6,7 @@
   <link href="https://jiutian521.github.io/atom.xml" rel="self"/>
   
   <link href="https://jiutian521.github.io/"/>
-  <updated>2026-03-20T03:50:34.200Z</updated>
+  <updated>2026-03-20T04:05:04.888Z</updated>
   <id>https://jiutian521.github.io/</id>
   
   <author>
@@ -17,11 +17,11 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>图片&amp;压缩包&amp;文本1</title>
+    <title>图片&amp;压缩包&amp;文本2</title>
     <link href="https://jiutian521.github.io/posts/9df0477.html"/>
     <id>https://jiutian521.github.io/posts/9df0477.html</id>
     <published>2026-03-19T16:00:00.000Z</published>
-    <updated>2026-03-20T03:50:34.200Z</updated>
+    <updated>2026-03-20T04:05:04.888Z</updated>
     
     <content type="html"><![CDATA[<h1 id="BUUCT-黑客帝国"><a href="#BUUCT-黑客帝国" class="headerlink" title="BUUCT 黑客帝国"></a>BUUCT 黑客帝国</h1><p>给了一个文本文档<br><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/image.4n89z0fodz.webp"></p><p>这实际上是一个十六进制文档，52 61 72 21 在ASCII码中对应 Rar!</p><p>用随波逐流里的16进制数据转文件，得到rar压缩包，需要密码，又没有任何提示，只能用ARCHPR爆破四位数字，得到密码打开压缩包，里面有一张图片，但是图片损坏打不开</p><p>把图片拖到010里查看</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/image.6ikurmxhxn.webp"></p><p>在010里直接输入是覆盖模式，要想插入需要按insert键切换，修改好后直接Ctrl+s保存即可</p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/729ec4d72da9599a308c64fe40156201.67y0yhosjk.webp"></p><h1 id="BUUCTF-金三胖"><a href="#BUUCTF-金三胖" class="headerlink" title="BUUCTF 金三胖"></a>BUUCTF 金三胖</h1><p>给了一个gif动图</p><p>在随波逐流里使用gif分解帧<br><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/image.4n89z10939.webp"></p><h1 id="BUUCTF-你竟然赶我走"><a href="#BUUCTF-你竟然赶我走" class="headerlink" title="BUUCTF 你竟然赶我走"></a>BUUCTF 你竟然赶我走</h1><p>给了一张图片</p><p>随波逐流可以一把梭</p><p>在010里下拉到最后，flag就在最后的ASCII码里</p><h1 id="BUUCTF-二维码"><a href="#BUUCTF-二维码" class="headerlink" title="BUUCTF 二维码"></a>BUUCTF 二维码</h1><p>给了一张二维码图片，直接扫肯定没结果</p><p>010里打开发现有txt文档，foremost分离一下得到压缩包</p><p>ARCHPR爆破即可</p><h1 id="大白"><a href="#大白" class="headerlink" title="大白"></a>大白</h1><p><strong>看不到图？ 是不是屏幕太小了</strong></p><p>给了一张图片</p><p>很明显缺了下半部分，在010里无法用模板，我们手动搜索<code>49 48 44 52</code><br><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/image.92qp4b536r.webp"></p><p>把<code>01</code>随便改个更大的值，比如<code>02</code></p><p><img src="https://github.com/JiuTian521/picx-images-hosting/raw/master/image.8ok9dg20xq.webp"></p>]]></content>
     
